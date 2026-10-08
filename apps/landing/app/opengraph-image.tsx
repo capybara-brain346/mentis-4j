@@ -11,6 +11,9 @@ export default async function SocialImage() {
   const landscape = await readFile(
     join(process.cwd(), "assets/social-valley.jpg"),
   );
+  const logo = await readFile(
+    join(process.cwd(), "public/images/mentis-logo.png"),
+  );
   return new ImageResponse(
     <div
       style={{
@@ -24,7 +27,22 @@ export default async function SocialImage() {
         fontFamily: "sans-serif",
       }}
     >
-      <div style={{ fontSize: 28, display: "flex", marginBottom: 28 }}>
+      <div
+        style={{
+          fontSize: 28,
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          marginBottom: 28,
+        }}
+      >
+        {/* Next ImageResponse requires a native image element. */}
+        <img
+          src={`data:image/png;base64,${logo.toString("base64")}`}
+          alt=""
+          width={36}
+          height={36}
+        />
         mentis
       </div>
       <div style={{ fontSize: 54, display: "flex", letterSpacing: -1.5 }}>

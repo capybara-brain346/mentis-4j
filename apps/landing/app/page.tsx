@@ -306,7 +306,12 @@ export default function Home() {
       <footer className="site-footer">
         <div className="container footer-top">
           <a href="#top" className="wordmark">
-            <Network size={25} aria-hidden="true" />
+            <Image
+              src="/images/mentis-logo.png"
+              alt=""
+              width={32}
+              height={32}
+            />
             <span>mentis</span>
           </a>
           <p>Memory for your coding agent.</p>

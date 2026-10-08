@@ -33,5 +33,19 @@
     "derivation": "Resize to 1080px width; JPEG quality 82. Source generation prompt is assets/prompts/valley.txt.",
     "use": "Build-time social preview",
     "synthetic": true
+  },
+  {
+    "asset": "public/images/mentis-logo.png",
+    "original": "assets/originals/mentis-logo.png",
+    "source": "User-supplied Monochrome Praying Mantis Emblem.png from ~/Downloads",
+    "tool": "ImageMagick",
+    "derivation": "Trim outer whitespace with 3% fuzz, make white transparent, resize to fit 96x96, center on a transparent 96x96 canvas, and remove metadata.",
+    "use": "Header, footer, and social preview logo"
+  },
+  {
+    "asset": "app/favicon.ico",
+    "source": "User-supplied Monochrome Praying Mantis Emblem.ico from ~/Downloads",
+    "derivation": "Copied without changes.",
+    "use": "Browser icon"
   }
 ]

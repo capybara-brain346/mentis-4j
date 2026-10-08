@@ -141,9 +141,6 @@ svg {
   line-height: 1;
   letter-spacing: -0.04em;
 }
-.wordmark svg {
-  color: var(--green);
-}
 .desktop-nav {
   display: flex;
   align-items: center;

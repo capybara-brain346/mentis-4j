@@ -24,3 +24,12 @@ Checked on 2026-10-07.
 The build and local server need permission to run outside this machine's sandbox. The first sandbox test run failed; the permitted run passed. The final preview listens only on `127.0.0.1:3000`.
 
 Captures and raw browser results are in `.impeccable/review/` at the repository root. The reviewer records are `finish-review.md` and `finish-verdict.md`. The selected workflow did not include image mockups or deployment.
+
+## Mentis logo integration — 2026-10-08
+
+- Production build, type check, lint, and formatting passed.
+- Browser checks passed at 1440px, 390px, and 320px. No page errors, horizontal overflow, or automated WCAG A/AA violations were found at 1440px and 390px.
+- The header and footer logo images decoded in the browser. The image check now covers all page images, including both logos.
+- The browser uses `/favicon.ico`. Its response is an exact copy of the supplied ICO. The saved original PNG is an exact copy of the supplied PNG.
+- The social preview returned HTTP 200 and rendered the emblem. Desktop, phone, and social preview captures were inspected.
+- Next.js reported a workspace-root warning because the repository has two package lockfiles. No build settings were changed.

@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowUpRight, Menu, Network } from "lucide-react";
+import Image from "next/image";
+import { ArrowUpRight, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -17,7 +18,13 @@ export function Navigation() {
   return (
     <header className="site-header container">
       <a className="wordmark" href="#top" aria-label="Mentis home">
-        <Network aria-hidden="true" size={25} strokeWidth={1.8} />
+        <Image
+          src="/images/mentis-logo.png"
+          alt=""
+          width={32}
+          height={32}
+          priority
+        />
         <span>mentis</span>
       </a>
       <nav className="desktop-nav" aria-label="Main navigation">

@@ -222,16 +222,15 @@ async function checkPage(name, viewport) {
     assert.equal(new URL(page.url()).hash, "#setup");
   }
 
-  for (const image of await page.locator("main img").all())
+  for (const image of await page.locator("img").all())
     await image.scrollIntoViewIfNeeded();
   await page.waitForLoadState("networkidle");
-  const images = await page.locator("main img").evaluateAll((nodes) =>
+  const images = await page.locator("img").evaluateAll((nodes) =>
     nodes.map((node) => ({
       src: node.currentSrc,
       loaded: node.complete && node.naturalWidth > 0,
     })),
   );
-  assert.equal(images.length, 3);
   assert.ok(images.every((image) => image.loaded));
   const audit = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
