@@ -30,6 +30,14 @@ Do not update `README.md` unless the user explicitly asks for a README update. U
 
 Keep durable architecture notes, workflows, and project-specific conventions in the appropriate documentation instead of growing this file unnecessarily.
 
+## Configuration
+
+Define every configurable variable, constant, and default value in `src/config/config.ts`. Import these values where needed. Do not define configurable values elsewhere in the codebase.
+
+## Code Spacing
+
+Use consistent blank lines to make code easy to read. Put one blank line between functions and between groups of statements that do different tasks. Keep related statements together. Avoid large blocks with no blank lines, inconsistent spacing, and repeated blank lines.
+
 ## Commands
 
 Run from the repository root:
