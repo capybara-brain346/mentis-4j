@@ -36,7 +36,7 @@ export default async function SocialImage() {
           marginBottom: 28,
         }}
       >
-        {/* Next ImageResponse requires a native image element. */}
+        {/* biome-ignore lint/performance/noImgElement: ImageResponse requires a native image element. */}
         <img
           src={`data:image/png;base64,${logo.toString("base64")}`}
           alt=""
@@ -58,7 +58,7 @@ export default async function SocialImage() {
       >
         Record coding attempts. Find related tasks. Inspect what happened.
       </div>
-      {/* Next ImageResponse requires a native image element. */}
+      {/* biome-ignore lint/performance/noImgElement: ImageResponse requires a native image element. */}
       <img
         src={`data:image/jpeg;base64,${landscape.toString("base64")}`}
         alt=""

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import {
   ArrowDown,
   ArrowRight,
@@ -9,16 +8,17 @@ import {
   Network,
   Search,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Navigation } from "@/components/navigation";
+import Image from "next/image";
+import { Corrections } from "@/components/corrections";
 import {
   AttemptHistory,
   Demo,
   RecordFields,
   SearchResult,
 } from "@/components/demo";
-import { Corrections } from "@/components/corrections";
+import { Navigation } from "@/components/navigation";
 import { Setup } from "@/components/setup";
+import { Button } from "@/components/ui/button";
 import { exampleSearch, sourceUrl } from "@/lib/demo";
 
 export default function Home() {
@@ -169,6 +169,7 @@ export default function Home() {
             </div>
             <div
               className="task-graph"
+              role="group"
               aria-label="One repository contains a task with two attempts"
             >
               <div className="graph-node">

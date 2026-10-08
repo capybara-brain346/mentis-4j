@@ -1,14 +1,14 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
 import { Check, Copy, Terminal } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState } from "react";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Button } from "@/components/ui/button";
 import {
   clientConfig,
   environmentCommands,
@@ -54,7 +54,7 @@ function CopyBlock({ code, label }: { code: string; label: string }) {
           {state === "copied" ? "Copied" : "Copy"}
         </Button>
       </div>
-      <pre tabIndex={0} aria-label={label}>
+      <pre role="group" tabIndex={0} aria-label={label}>
         <code>{code}</code>
       </pre>
       <span className="sr-only" aria-live="polite">

@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import neo4j, { type Record as Neo4jRecord } from "neo4j-driver";
 import { CONFIG } from "../config/config.js";
-import { embedText, type EmbeddingInputType } from "./embeddings.js";
 import type { Database } from "./db.js";
+import { type EmbeddingInputType, embedText } from "./embeddings.js";
 import { jevRelevance } from "./jev.js";
 import { logger } from "./logger.js";
 

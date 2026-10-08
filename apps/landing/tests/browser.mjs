@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { mkdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { chromium, request } from "playwright";
 import AxeBuilder from "@axe-core/playwright";
+import { chromium, request } from "playwright";
 import {
-  installCommands,
+  clientConfig,
   environmentCommands,
   indexCommand,
-  clientConfig,
+  installCommands,
   sourceUrl,
 } from "../lib/demo.ts";
 

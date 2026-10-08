@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { CONFIG } from "../config/config.js";
-import { logger } from "./logger.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { CONFIG } from "../config/config.js";
 import type { MemoryGraph } from "./graph.js";
+import { logger } from "./logger.js";
 
 const text = z.string().trim().min(1);
 const files = z.array(text).min(1);

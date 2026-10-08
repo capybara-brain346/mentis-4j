@@ -7,13 +7,13 @@
 - `docs/planning/` — product, memory, graph, MCP-boundary, and implementation planning documents.
 - `README.md` — setup, supported MCP tools, graph behavior, security boundary, and checks.
 - `compose.yaml` — local Neo4j service and persistent data volume.
-- `package.json`, `package-lock.json`, `tsconfig.json`, `.eslintrc.json` — scripts, dependency lock, TypeScript build, and lint configuration.
+- `package.json`, `package-lock.json`, `tsconfig.json`, `biome.json` — scripts, dependency lock, TypeScript build, and lint and format configuration.
 - `dist/` — generated TypeScript build output; ignored by Git and must not be hand-edited.
 
 ## Sources Of Truth
 
 - `src/` and `tests/` define current runtime behavior and executable expectations. The database-backed tests are skipped unless `NEO4J_PASSWORD` is set and Neo4j is reachable.
-- `package.json`, `package-lock.json`, `tsconfig.json`, `.eslintrc.json`, and `compose.yaml` define dependency resolution, scripts, compilation/linting, and local database configuration.
+- `package.json`, `package-lock.json`, `tsconfig.json`, `biome.json`, and `compose.yaml` define dependency resolution, scripts, compilation/linting, and local database configuration.
 - `README.md` defines the user-facing setup and current tool contract. `docs/planning/` is design context, not proof of implemented behavior. `mentis-idea.md` describes an older incident-response direction; do not treat it as the current product or runtime specification.
 
 The implementation and tests define current behavior. The user request defines intended behavior. If they differ, surface the discrepancy and resolve it explicitly.
@@ -37,8 +37,11 @@ Run from the repository root:
 - `npm install` — install dependencies (`npm ci` reproduces the lockfile in clean environments).
 - `npm run build` — compile `src/` TypeScript into generated `dist/` output.
 - `npm run typecheck` — type-check without emitting files.
-- `npm run lint` — lint TypeScript under `src/`.
-- `npm run format` — check Prettier formatting for the configured source, test, and package files; this is check-only.
+- `npm run lint` — run Biome lint checks on server and landing app source.
+- `npm run format` — check Biome formatting for the configured source, test, and configuration files; this is check-only.
+- `npm run check` — check lint rules, formatting, and import order for the server and landing app.
+- `npm run fix` — apply Biome formatting, import order, and safe lint fixes.
+- `npm run format:write` — apply Biome formatting only.
 - `npm test` — build, then run `tests/*.test.js`; graph and MCP integration tests skip unless `NEO4J_PASSWORD` is exported in the shell and a Neo4j server is reachable. Compose’s `.env` loading does not automatically set variables for `npm`.
 - `docker compose up -d` — start local Neo4j; set `NEO4J_PASSWORD` in the shell or `.env` first. The service binds its ports to localhost and persists data in the `neo4j_data` volume.
 - `npm start` — start the compiled MCP server; requires a reachable Neo4j database and `NEO4J_PASSWORD` (see `README.md` for optional connection settings).

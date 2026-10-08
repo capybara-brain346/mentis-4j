@@ -6,8 +6,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "eslint --ext .ts src",
-    "format": "prettier --check 'src/**/*.ts' 'tests/**/*.js' package.json .eslintrc.json wrangler.jsonc",
+    "lint": "biome lint .",
+    "format": "biome format .",
+    "format:write": "biome format --write .",
+    "check": "biome check .",
+    "fix": "biome check --write .",
     "test": "npm run build && node --test tests/*.test.js",
     "start": "node dist/process/server.js",
     "worker:build": "wrangler deploy --dry-run",
@@ -22,12 +25,9 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@types/node": "^22.20.4",
-    "@typescript-eslint/eslint-plugin": "^8.70.1",
-    "@typescript-eslint/parser": "^8.70.1",
-    "eslint": "^8.57.1",
     "husky": "^9.1.7",
-    "prettier": "^3.9.9",
     "typescript": "^5.9.3",
     "wrangler": "^4.141.0"
   }

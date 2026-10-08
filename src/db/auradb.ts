@@ -114,10 +114,7 @@ class WorkspaceTransaction implements AuraTransaction {
     private readonly workspaceId: string,
   ) {}
 
-  run(
-    query: string,
-    parameters: Record<string, unknown> = {},
-  ): Result {
+  run(query: string, parameters: Record<string, unknown> = {}): Result {
     if (!isWorkspaceRestrictedQuery(query)) {
       throw new Error(
         "AuraDB queries must scope every private node to a workspace",

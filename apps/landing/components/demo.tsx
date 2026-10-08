@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   ArrowRight,
   Check,
@@ -13,6 +12,7 @@ import {
   Search,
   X,
 } from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exampleSearch, failedAttempt, passedAttempt } from "@/lib/demo";
@@ -146,7 +146,11 @@ export function Demo() {
   }, [paused, reducedMotion]);
 
   return (
-    <div className="demo-window" aria-label="Mentis product demonstration">
+    <div
+      className="demo-window"
+      role="group"
+      aria-label="Mentis product demonstration"
+    >
       <div className="window-title">
         <div className="window-dots" aria-hidden="true">
           <i />

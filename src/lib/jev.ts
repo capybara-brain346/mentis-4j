@@ -1,6 +1,6 @@
 import { CONFIG, getOpenRouterApiKey } from "../config/config.js";
-import { logger } from "./logger.js";
 import type { AttemptRecord } from "./graph.js";
+import { logger } from "./logger.js";
 
 export const JEV_MODEL = CONFIG.relevance.model;
 

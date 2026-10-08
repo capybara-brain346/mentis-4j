@@ -570,174 +570,169 @@ test("Jev failures return all vector candidates with null relevance scores", asy
   );
 });
 
-test(
-  "discovers paraphrased attempts, groups task history, and bounds recall",
-  { skip: !canRun },
-  async () => {
-    const database = new Database();
-    const graph = new MemoryGraph(database);
-    const repository = `graph-test-${randomUUID()}`;
-    const shared = {
-      ...attempt,
-      repository,
-      taskId: "cookie-session-loop",
-      codeContext: "Vite at abc123, local HTTP",
-      affectedFiles: ["src/Login.tsx"],
-    };
+test("discovers paraphrased attempts, groups task history, and bounds recall", {
+  skip: !canRun,
+}, async () => {
+  const database = new Database();
+  const graph = new MemoryGraph(database);
+  const repository = `graph-test-${randomUUID()}`;
+  const shared = {
+    ...attempt,
+    repository,
+    taskId: "cookie-session-loop",
+    codeContext: "Vite at abc123, local HTTP",
+    affectedFiles: ["src/Login.tsx"],
+  };
 
-    try {
-      await database.verifyConnectivity();
-      const original = await graph.recordAttempt({
-        ...shared,
-        action: "Change the login redirect",
-        observation: "Authentication still cycles back to the sign-in page",
-        inference: "The cookie redirect path causes the login loop",
-        check: { method: "browser test", result: "failed" },
-      });
-      const forgotten = await graph.recordAttempt({
-        ...shared,
-        action: "Retain the session cookie over local HTTP",
-        observation: "The browser stays signed in after login",
-        check: { method: "browser test", result: "passed" },
-        evidenceReferences: ["test://browser-login"],
-      });
-      await graph.recordAttempt({
-        ...shared,
-        taskId: "separate-cookie-investigation",
-        action: "Inspect whether the session cookie is retained",
-        observation: "The user is sent back to sign-in after authenticating",
-      });
+  try {
+    await database.verifyConnectivity();
+    const original = await graph.recordAttempt({
+      ...shared,
+      action: "Change the login redirect",
+      observation: "Authentication still cycles back to the sign-in page",
+      inference: "The cookie redirect path causes the login loop",
+      check: { method: "browser test", result: "failed" },
+    });
+    const forgotten = await graph.recordAttempt({
+      ...shared,
+      action: "Retain the session cookie over local HTTP",
+      observation: "The browser stays signed in after login",
+      check: { method: "browser test", result: "passed" },
+      evidenceReferences: ["test://browser-login"],
+    });
+    await graph.recordAttempt({
+      ...shared,
+      taskId: "separate-cookie-investigation",
+      action: "Inspect whether the session cookie is retained",
+      observation: "The user is sent back to sign-in after authenticating",
+    });
 
-      const historyBefore = await graph.recall({
-        cypher: `MATCH (t:Task {identity: $taskId, repositoryIdentity: $repository})-[:HAS_ATTEMPT]->(a:Attempt)
+    const historyBefore = await graph.recall({
+      cypher: `MATCH (t:Task {identity: $taskId, repositoryIdentity: $repository})-[:HAS_ATTEMPT]->(a:Attempt)
                  RETURN a.id AS id ORDER BY a.recordedAt`,
-        parameters: { taskId: shared.taskId, repository },
-      });
-      assert.equal(historyBefore.rows.length, 2);
+      parameters: { taskId: shared.taskId, repository },
+    });
+    assert.equal(historyBefore.rows.length, 2);
 
-      const candidates = await graph.search({
-        repository,
-        query:
-          "users are repeatedly returned to the login screen after signing in",
-        limit: 20,
-      });
-      assert.ok(candidates.some(({ taskId }) => taskId === shared.taskId));
-      assert.equal(
-        candidates.filter(({ taskId }) => taskId === shared.taskId).length,
-        1,
-      );
-      assert.ok(
-        candidates.every(
-          ({ matchedAttemptPreview, similarity, relevanceScore }) =>
-            matchedAttemptPreview.length <= 240 &&
-            Number.isFinite(similarity) &&
-            (relevanceScore === null || Number.isFinite(relevanceScore)),
-        ),
-      );
+    const candidates = await graph.search({
+      repository,
+      query:
+        "users are repeatedly returned to the login screen after signing in",
+      limit: 20,
+    });
+    assert.ok(candidates.some(({ taskId }) => taskId === shared.taskId));
+    assert.equal(
+      candidates.filter(({ taskId }) => taskId === shared.taskId).length,
+      1,
+    );
+    assert.ok(
+      candidates.every(
+        ({ matchedAttemptPreview, similarity, relevanceScore }) =>
+          matchedAttemptPreview.length <= 240 &&
+          Number.isFinite(similarity) &&
+          (relevanceScore === null || Number.isFinite(relevanceScore)),
+      ),
+    );
 
-      const corrected = await graph.markConclusionOutdated({
-        repository,
-        attemptId: original.id,
-        reason: "Header-based auth replaced the cookie path",
-        latestCommit: "b7d9e1",
-      });
-      assert.equal(corrected.verification, "failed");
-      assert.equal(
-        corrected.inference,
-        "The cookie redirect path causes the login loop",
-      );
-      assert.equal(corrected.outdated.latestCommit, "b7d9e1");
-      const updated = await graph.markConclusionOutdated({
-        repository,
-        attemptId: original.id,
-        reason: "New evidence confirms the old conclusion is outdated",
-      });
-      assert.equal(updated.outdated.latestCommit, "b7d9e1");
-      assert.equal(
-        updated.outdated.reason,
-        "New evidence confirms the old conclusion is outdated",
-      );
-      await graph.forgetAttempt({ repository, attemptId: forgotten.id });
+    const corrected = await graph.markConclusionOutdated({
+      repository,
+      attemptId: original.id,
+      reason: "Header-based auth replaced the cookie path",
+      latestCommit: "b7d9e1",
+    });
+    assert.equal(corrected.verification, "failed");
+    assert.equal(
+      corrected.inference,
+      "The cookie redirect path causes the login loop",
+    );
+    assert.equal(corrected.outdated.latestCommit, "b7d9e1");
+    const updated = await graph.markConclusionOutdated({
+      repository,
+      attemptId: original.id,
+      reason: "New evidence confirms the old conclusion is outdated",
+    });
+    assert.equal(updated.outdated.latestCommit, "b7d9e1");
+    assert.equal(
+      updated.outdated.reason,
+      "New evidence confirms the old conclusion is outdated",
+    );
+    await graph.forgetAttempt({ repository, attemptId: forgotten.id });
 
-      const history = await graph.recall({
-        cypher: `MATCH (t:Task {identity: $taskId, repositoryIdentity: $repository})-[:HAS_ATTEMPT]->(a:Attempt)
+    const history = await graph.recall({
+      cypher: `MATCH (t:Task {identity: $taskId, repositoryIdentity: $repository})-[:HAS_ATTEMPT]->(a:Attempt)
                  RETURN t.identity AS taskId, a.id AS id, a.action AS action,
                         a.inference AS inference, a.checkResult AS result,
                         a.gitCommit AS gitCommit, a.gitDirty AS gitDirty,
                         a.outdatedReason AS outdatedReason, a.outdatedAt AS outdatedAt,
                         a.latestCommit AS latestCommit
                  ORDER BY a.recordedAt`,
-        parameters: { taskId: shared.taskId, repository },
-      });
-      assert.deepEqual(
-        [...history.columns].sort(),
-        [
-          "taskId",
-          "id",
-          "action",
-          "inference",
-          "result",
-          "gitCommit",
-          "gitDirty",
-          "outdatedReason",
-          "outdatedAt",
-          "latestCommit",
-        ].sort(),
-      );
-      assert.equal(history.rows.length, 1);
-      const historyRow = Object.fromEntries(
-        history.columns.map((column, index) => [
-          column,
-          history.rows[0][index],
-        ]),
-      );
-      assert.equal(historyRow.id, original.id);
-      assert.equal(
-        historyRow.inference,
-        "The cookie redirect path causes the login loop",
-      );
-      assert.equal(historyRow.result, "failed");
-      assert.equal(historyRow.gitCommit, "a8c3f2");
-      assert.equal(historyRow.gitDirty, true);
-      assert.equal(
-        historyRow.outdatedReason,
-        "New evidence confirms the old conclusion is outdated",
-      );
-      assert.equal(historyRow.outdatedAt, updated.outdated.correctedAt);
-      assert.equal(historyRow.latestCommit, "b7d9e1");
+      parameters: { taskId: shared.taskId, repository },
+    });
+    assert.deepEqual(
+      [...history.columns].sort(),
+      [
+        "taskId",
+        "id",
+        "action",
+        "inference",
+        "result",
+        "gitCommit",
+        "gitDirty",
+        "outdatedReason",
+        "outdatedAt",
+        "latestCommit",
+      ].sort(),
+    );
+    assert.equal(history.rows.length, 1);
+    const historyRow = Object.fromEntries(
+      history.columns.map((column, index) => [column, history.rows[0][index]]),
+    );
+    assert.equal(historyRow.id, original.id);
+    assert.equal(
+      historyRow.inference,
+      "The cookie redirect path causes the login loop",
+    );
+    assert.equal(historyRow.result, "failed");
+    assert.equal(historyRow.gitCommit, "a8c3f2");
+    assert.equal(historyRow.gitDirty, true);
+    assert.equal(
+      historyRow.outdatedReason,
+      "New evidence confirms the old conclusion is outdated",
+    );
+    assert.equal(historyRow.outdatedAt, updated.outdated.correctedAt);
+    assert.equal(historyRow.latestCommit, "b7d9e1");
 
-      const deleted = await graph.recall({
-        cypher: "MATCH (a:Attempt {id: $attemptId}) RETURN a.id AS id",
-        parameters: { attemptId: forgotten.id },
-      });
-      assert.deepEqual(deleted.rows, []);
+    const deleted = await graph.recall({
+      cypher: "MATCH (a:Attempt {id: $attemptId}) RETURN a.id AS id",
+      parameters: { attemptId: forgotten.id },
+    });
+    assert.deepEqual(deleted.rows, []);
 
-      const separateHistory = await graph.recall({
-        cypher: `MATCH (t:Task {identity: $taskId, repositoryIdentity: $repository})-[:HAS_ATTEMPT]->(a:Attempt)
+    const separateHistory = await graph.recall({
+      cypher: `MATCH (t:Task {identity: $taskId, repositoryIdentity: $repository})-[:HAS_ATTEMPT]->(a:Attempt)
                  RETURN t.identity AS taskId, count(a) AS attempts`,
-        parameters: { taskId: "separate-cookie-investigation", repository },
-      });
-      assert.deepEqual(
-        [...separateHistory.columns].sort(),
-        ["taskId", "attempts"].sort(),
-      );
-      const separateHistoryRow = Object.fromEntries(
-        separateHistory.columns.map((column, index) => [
-          column,
-          separateHistory.rows[0][index],
-        ]),
-      );
-      assert.equal(separateHistoryRow.taskId, "separate-cookie-investigation");
-      assert.equal(separateHistoryRow.attempts, 1);
+      parameters: { taskId: "separate-cookie-investigation", repository },
+    });
+    assert.deepEqual(
+      [...separateHistory.columns].sort(),
+      ["taskId", "attempts"].sort(),
+    );
+    const separateHistoryRow = Object.fromEntries(
+      separateHistory.columns.map((column, index) => [
+        column,
+        separateHistory.rows[0][index],
+      ]),
+    );
+    assert.equal(separateHistoryRow.taskId, "separate-cookie-investigation");
+    assert.equal(separateHistoryRow.attempts, 1);
 
-      const bounded = await graph.recall({
-        cypher: "UNWIND range(1, 110) AS value RETURN value",
-      });
-      assert.equal(bounded.rows.length, 100);
-      assert.equal(bounded.truncated, true);
-      assert.equal(bounded.truncationReason, "row_limit");
-    } finally {
-      await database.close();
-    }
-  },
-);
+    const bounded = await graph.recall({
+      cypher: "UNWIND range(1, 110) AS value RETURN value",
+    });
+    assert.equal(bounded.rows.length, 100);
+    assert.equal(bounded.truncated, true);
+    assert.equal(bounded.truncationReason, "row_limit");
+  } finally {
+    await database.close();
+  }
+});

@@ -8,8 +8,11 @@
     "build": "next build",
     "preview": "next start --hostname 127.0.0.1 --port 3000",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint app components lib next.config.ts",
-    "format": "prettier --check app components lib tests *.json *.ts *.mjs",
+    "lint": "biome lint .",
+    "format": "biome format .",
+    "format:write": "biome format --write .",
+    "check": "biome check .",
+    "fix": "biome check --write .",
     "check:browser": "node tests/browser.mjs"
   },
   "dependencies": {
@@ -25,14 +28,12 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
+    "@biomejs/biome": "2.5.15",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "eslint": "^9.0.0",
-    "eslint-config-next": "^16.0.0",
     "playwright": "^1.63.0",
-    "prettier": "^3.0.0",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.9.0"
   }
