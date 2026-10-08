@@ -146,3 +146,6 @@ vite.config.ts.timestamp-*
 
 # Plan files
 docs/planning/
+
+# Impeccable
+.impeccable/

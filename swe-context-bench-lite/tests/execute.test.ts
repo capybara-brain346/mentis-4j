@@ -183,6 +183,7 @@ test("container audit checks bind destinations and Docker HostConfig tmpfs", () 
 
 test("Mentis config forwards secrets to stdio only and filters target tools", () => {
   const experience = codexConfig("experience");
+  assert.match(experience, /\[features\]\napps = false\n/);
   assert.match(
     experience,
     /env_vars = \["NEO4J_URI","NEO4J_PASSWORD","OPENROUTER_API_KEY"\]/,
@@ -194,11 +195,16 @@ test("Mentis config forwards secrets to stdio only and filters target tools", ()
   assert.doesNotMatch(experience, /NEO4J_PASSWORD\s*=/);
   assert.doesNotMatch(experience, /enabled_tools/);
   assert.ok(experience.includes('cwd = "/opt/mentis"'));
+  assert.ok(
+    experience.includes('args = ["/opt/mentis/dist/process/server.js"]'),
+  );
 
   const target = codexConfig("mentis");
+  assert.match(target, /\[features\]\napps = false\n/);
   assert.match(target, /enabled_tools = \["search", "recall"\]/);
   assert.doesNotMatch(target, /record_attempt/);
 
   const baseline = codexConfig("baseline");
+  assert.match(baseline, /\[features\]\napps = false\n/);
   assert.doesNotMatch(baseline, /mcp_servers|mentis/);
 });

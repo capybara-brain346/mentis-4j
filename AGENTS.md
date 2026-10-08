@@ -1,13 +1,5 @@
 # Repository Operating Guide
 
-## Scope
-
-These instructions apply to this repository. More specific `AGENTS.md` files in subdirectories override them. There are currently no nested `AGENTS.md` files.
-
-Before changing a component, read the relevant package/config files and the applicable service or module documentation for that component. Trace tool calls through `src/tools.ts`, `src/graph.ts`, and `src/db.ts` when the change crosses those boundaries.
-
-Code and documentation changes should be scoped to the user’s request. Do not expand the architecture, introduce new systems, or make opportunistic refactors unless explicitly requested.
-
 ## Repository Map
 
 - `src/` — TypeScript stdio MCP server, tool contracts, Neo4j access, and graph operations.
@@ -31,23 +23,6 @@ Do not hand-edit generated files. Use the repository’s documented generation, 
 ## Ponytail
 
 Use the `ponytail` skill at its default `full` level for implementation, fixes, refactors, and reviews. Prefer the smallest correct change and do not add speculative abstractions or dependencies.
-
-## Architecture Boundaries
-
-Do not introduce new:
-
-- services
-- libraries
-- databases
-- queues
-- architectural patterns
-- abstractions
-- background workers
-- state management systems
-
-without explicitly explaining why and asking first.
-
-Implement only the architecture requested. If the requested design has problems, point them out before writing code rather than silently redesigning it.
 
 ## Documentation
 

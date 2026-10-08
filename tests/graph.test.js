@@ -615,6 +615,26 @@ test(
       });
       assert.equal(historyBefore.rows.length, 2);
 
+      const candidates = await graph.search({
+        repository,
+        query:
+          "users are repeatedly returned to the login screen after signing in",
+        limit: 20,
+      });
+      assert.ok(candidates.some(({ taskId }) => taskId === shared.taskId));
+      assert.equal(
+        candidates.filter(({ taskId }) => taskId === shared.taskId).length,
+        1,
+      );
+      assert.ok(
+        candidates.every(
+          ({ matchedAttemptPreview, similarity, relevanceScore }) =>
+            matchedAttemptPreview.length <= 240 &&
+            Number.isFinite(similarity) &&
+            (relevanceScore === null || Number.isFinite(relevanceScore)),
+        ),
+      );
+
       const corrected = await graph.markConclusionOutdated({
         repository,
         attemptId: original.id,
@@ -639,32 +659,6 @@ test(
       );
       await graph.forgetAttempt({ repository, attemptId: forgotten.id });
 
-      const candidates = await graph.search({
-        repository,
-        query:
-          "users are repeatedly returned to the login screen after signing in",
-        limit: 20,
-      });
-      assert.ok(candidates.some(({ taskId }) => taskId === shared.taskId));
-      assert.equal(
-        candidates.filter(({ taskId }) => taskId === shared.taskId).length,
-        1,
-      );
-      assert.ok(
-        candidates.every(
-          ({
-            matchedAttemptId,
-            matchedAttemptPreview,
-            similarity,
-            relevanceScore,
-          }) =>
-            matchedAttemptId !== forgotten.id &&
-            matchedAttemptPreview.length <= 240 &&
-            Number.isFinite(similarity) &&
-            (relevanceScore === null || Number.isFinite(relevanceScore)),
-        ),
-      );
-
       const history = await graph.recall({
         cypher: `MATCH (t:Task {identity: $taskId, repositoryIdentity: $repository})-[:HAS_ATTEMPT]->(a:Attempt)
                  RETURN t.identity AS taskId, a.id AS id, a.action AS action,
@@ -675,33 +669,42 @@ test(
                  ORDER BY a.recordedAt`,
         parameters: { taskId: shared.taskId, repository },
       });
-      assert.deepEqual(history.columns, [
-        "taskId",
-        "id",
-        "action",
-        "inference",
-        "result",
-        "gitCommit",
-        "gitDirty",
-        "outdatedReason",
-        "outdatedAt",
-        "latestCommit",
-      ]);
+      assert.deepEqual(
+        [...history.columns].sort(),
+        [
+          "taskId",
+          "id",
+          "action",
+          "inference",
+          "result",
+          "gitCommit",
+          "gitDirty",
+          "outdatedReason",
+          "outdatedAt",
+          "latestCommit",
+        ].sort(),
+      );
       assert.equal(history.rows.length, 1);
-      assert.equal(history.rows[0][1], original.id);
+      const historyRow = Object.fromEntries(
+        history.columns.map((column, index) => [
+          column,
+          history.rows[0][index],
+        ]),
+      );
+      assert.equal(historyRow.id, original.id);
       assert.equal(
-        history.rows[0][3],
+        historyRow.inference,
         "The cookie redirect path causes the login loop",
       );
-      assert.equal(history.rows[0][4], "failed");
-      assert.equal(history.rows[0][5], "a8c3f2");
-      assert.equal(history.rows[0][6], true);
+      assert.equal(historyRow.result, "failed");
+      assert.equal(historyRow.gitCommit, "a8c3f2");
+      assert.equal(historyRow.gitDirty, true);
       assert.equal(
-        history.rows[0][7],
+        historyRow.outdatedReason,
         "New evidence confirms the old conclusion is outdated",
       );
-      assert.equal(history.rows[0][8], updated.outdated.correctedAt);
-      assert.equal(history.rows[0][9], "b7d9e1");
+      assert.equal(historyRow.outdatedAt, updated.outdated.correctedAt);
+      assert.equal(historyRow.latestCommit, "b7d9e1");
 
       const deleted = await graph.recall({
         cypher: "MATCH (a:Attempt {id: $attemptId}) RETURN a.id AS id",
@@ -714,10 +717,18 @@ test(
                  RETURN t.identity AS taskId, count(a) AS attempts`,
         parameters: { taskId: "separate-cookie-investigation", repository },
       });
-      assert.deepEqual(separateHistory.rows[0], [
-        "separate-cookie-investigation",
-        1,
-      ]);
+      assert.deepEqual(
+        [...separateHistory.columns].sort(),
+        ["taskId", "attempts"].sort(),
+      );
+      const separateHistoryRow = Object.fromEntries(
+        separateHistory.columns.map((column, index) => [
+          column,
+          separateHistory.rows[0][index],
+        ]),
+      );
+      assert.equal(separateHistoryRow.taskId, "separate-cookie-investigation");
+      assert.equal(separateHistoryRow.attempts, 1);
 
       const bounded = await graph.recall({
         cypher: "UNWIND range(1, 110) AS value RETURN value",

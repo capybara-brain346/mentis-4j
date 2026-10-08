@@ -1,5 +1,41 @@
 # Paired Lite benchmark handoff
 
+## Cancelled run — 2026-10-07
+
+- The user stopped the benchmark because of usage. Do not restart, run more coding trials, or grade patches without a new user request. Saved files were retained. The benchmark's agent container, database container, network, and volume were removed.
+- Corrected run: `.data/cohort-20261007-investigation/run-2026-10-07T133007663Z/`, former runner PID `120581`. The launcher recorded `SIGTERM` at `2026-10-07T14:02:00.754Z`. Seven experience trials finished with exit 0 and patches. Astropy failed its pytest image check because `erfa` was absent. Task 9, `pytest-dev__pytest-7490`, was interrupted. No pilot or target trial ran. All seven local searches returned zero candidates; all seven local records succeeded. No connected app calls occurred in the completed corrected-run traces.
+- Completed trials across the earlier and corrected runs reported 8,872,425 input tokens (8,154,368 cached, already included) and 119,970 output tokens. These totals exclude interrupted tasks and other session work. They are not a bill. There is no baseline versus Mentis result.
+
+- Update from the authorized rerun: OpenRouter key check passed. The live graph and stdio checks passed (2 tests, no failures or skips) against a separate database. Two test assumptions were corrected: recall checks now use returned column names, and graph search is checked before the useful record is deleted. Runtime code and benchmark settings were unchanged.
+- Stopped run: `.data/cohort-20261007-investigation/run-2026-10-07T123720277Z/`, former runner PID `79893`. The official grader gate passed. Six experience trials finished with exit 0 and patches; task 7 was interrupted. No target trial ran. Pinned CLI feature inspection confirmed apps were enabled. Experience traces attempted remote `codex_apps/mentis_4j.*` calls despite the local MCP server check. Stop signal was `SIGTERM`; owned agent, database, network, and volume were removed. Keep the saved artifacts. A fresh run must disable connected apps and verify that setting before every trial. Do not reuse this run for the corrected comparison.
+- Final partial results and check evidence are recorded in `docs/experiments/mentis-benchmark-results-2026-10-07.md`. The saved patches were not independently graded. No target benefit or failure rate can be inferred.
+
+The following notes describe historical setup before this rerun. Access and key checks later passed. These notes do not authorize a restart.
+
+- The user authorized a new run and requested `gpt-6-luna` with `xhigh` reasoning for the test coding agents. Both arms use those settings with pinned Codex CLI `0.156.1` in isolated containers.
+- The old ignored cohort and evaluator checkout were absent on this machine. The existing benchmark source was retained. Pinned downloads were restored and the cohort was regenerated with the original seed `20260924`.
+- Prepared cohort: `.data/cohort-20261007-investigation/` (50 experience tasks, 17 targets, 33 eligible targets).
+- Evaluator: `.data/evaluator/`, verified at `12ad6ab14e18e9378e1e293c9edbc3f7ce43d27b`.
+- Stopped setup run: `.data/cohort-20261007-investigation/run-2026-10-07T120553024Z/`. The first agent image failed at `npm ci` because the Wrangler declaration and lock differed. One infrastructure failure was recorded before any coding trial. The runner was stopped; its owned database, network, and volume were removed. Keep these artifacts and start a new run directory.
+- The dependency lock now matches the existing `wrangler: ^4.141.0` declaration. A fresh source-only Docker build passed `npm ci`, compilation, and CLI installation. Image `mentis-agent:cd202a93077e1287` passed Node, Codex, and server-path checks.
+- The known-correct grader gate resolved its one task. The empty submission did not resolve it. A separate pinned-CLI model probe returned `READY` with the requested model and effort. No coding trial or target score is available yet.
+- Live graph and stdio MCP checks used a separate disposable database. Both failed before storage because OpenRouter returned HTTP 401 (`API key expired`). The user then replaced the key in `.env`. Its presence is confirmed, but its validity is not yet verified.
+- The session changed to managed access after the key update. A network check failed with `EAI_AGAIN`; Docker access failed with permission denied on `/var/run/docker.sock`. These are current launch blockers. Do not report the updated key as working or the benchmark as running.
+- Resume from the repository root with `node swe-context-bench-lite/.data/resume-run.mjs` when network and Docker access are available. The private script checks the updated key, tests live record/search/recall against a disposable database, removes that database, and starts the existing launcher only if the checks pass. The launcher keeps the original 50/17 cohort, model, effort, and limits. Its new run directory and PID are printed. Do not launch a duplicate run.
+- The MCP config path was corrected to `dist/process/server.js`. Raw JSONL is retained unchanged; separate `.timing.json` files record stdout receipt times and byte offsets. Timing is a receipt proxy, not exact command execution time.
+- Investigation rules were fixed before target results in `docs/experiments/mentis-investigation-protocol-2026-10-07.md` and copied into the run. Six targets have provisional investigation labels. Report the complete cohort and the exploratory subgroup separately.
+- Two read-only subagents checked setup and scoring. No static launch blocker was found. Fixed baseline-first order, one attempt per arm, required retrieval, and subjective trace review limit claims. Their findings are recorded in `setup-audit.json`.
+- Benchmark TypeScript compilation and 9 Node tests passed. The Python preparation and trace checks passed (6 tests). Root build/tests passed with 23 passed and 2 database tests skipped; lint and format passed. The later live database checks failed as stated above. A first Python test command from the repository root failed to import `prepare`; the documented command from the benchmark directory passed.
+- `investigation.py` extracts completed command/MCP counts and visible event references from raw traces. It excludes pilot trials from standard totals and preserves missing timing and token data. Run `python3 swe-context-bench-lite/investigation.py <finished-run-directory>` after the run. Do not treat failed commands as wasted investigation. Manual diagnosis and repeated-path review remains required.
+
+```text
+Valid key + Docker access -> Live memory checks -> New 50/17 run
+                                 |
+                              failure -> Stop; retain check log
+```
+
+The remaining sections describe the earlier September run and its historical paths. They are not the current runtime state.
+
 ## Goal
 
 Finish the SWE-ContextBench Lite paired-subset experiment: run 50 experience tasks, freeze the resulting Mentis DB, pass the linked experience→target pilot in baseline and Mentis arms, then run 17 targets in both arms and grade predictions with the pinned evaluator's released `evaluation.sh`. Produce per-target outcomes and artifacts. Do not claim completion before the pilot and cohort finish.

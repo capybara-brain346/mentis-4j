@@ -36,6 +36,7 @@ export interface AttemptInput {
   elapsed_ms: number;
   arm: "experience" | "baseline" | "mentis";
   events: string;
+  event_timing?: Array<{ end_byte_offset: number; elapsed_ms: number }>;
   patch: string | null;
   error?: string;
   failure_kind?: "infrastructure" | "codex_failure";
@@ -157,6 +158,12 @@ export async function recordAttempt(
   await mkdir(dirname(paths.prediction), { recursive: true });
 
   await writeFile(paths.events, input.events, { flag: "wx" });
+  const timingPath = `${paths.events}.timing.json`;
+  if (input.event_timing !== undefined) {
+    await writeFile(timingPath, `${JSON.stringify(input.event_timing)}\n`, {
+      flag: "wx",
+    });
+  }
   if (input.patch !== null) {
     await writeFile(paths.patch, input.patch, { flag: "wx" });
     await writeFile(
@@ -192,6 +199,10 @@ export async function recordAttempt(
     retrieved_task_ids: input.retrieved_task_ids ?? null,
     patch_status: input.patch === null ? "no_patch" : "present",
     events_path: paths.relative.events,
+    event_timing_path:
+      input.event_timing === undefined
+        ? null
+        : relativeOutput(runDir, timingPath),
     patch_path: input.patch === null ? null : paths.relative.patch,
     prediction_path: input.patch === null ? null : paths.relative.prediction,
   };

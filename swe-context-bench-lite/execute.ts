@@ -47,6 +47,9 @@ export function experienceTaskImageFor(task: Pick<Task, "task_id">): string {
 
 export function codexConfig(arm: Arm): string {
   const lines = [
+    "[features]",
+    "apps = false",
+    "",
     "[shell_environment_policy]",
     'inherit = "all"',
     'exclude = ["NEO4J_PASSWORD", "OPENROUTER_API_KEY"]',
@@ -56,7 +59,7 @@ export function codexConfig(arm: Arm): string {
       "",
       "[mcp_servers.mentis]",
       'command = "node"',
-      'args = ["/opt/mentis/dist/server.js"]',
+      'args = ["/opt/mentis/dist/process/server.js"]',
       'cwd = "/opt/mentis"',
       `env_vars = ${JSON.stringify(TOOL_ENV)}`,
     );
@@ -334,7 +337,7 @@ function codexConfigProbe(
     "sh",
     image,
     "-c",
-    "test ! -S /var/run/docker.sock && test ! -S /run/docker.sock && test ! -e /grader-only && test ! -e /testbed/grader-only && test ! -e /opt/mentis/grader-only && codex login status >/dev/null && codex mcp list --json",
+    "test ! -S /var/run/docker.sock && test ! -S /run/docker.sock && test ! -e /grader-only && test ! -e /testbed/grader-only && test ! -e /opt/mentis/grader-only && codex login status >/dev/null && features=$(codex features list) && printf '%s\\n' \"$features\" | grep -Eq '^apps[[:space:]]+stable[[:space:]]+false$' && codex mcp list --json",
   ];
   const servers = JSON.parse(docker(common)) as Array<{ name: string }>;
   if (arm === "baseline") {
@@ -460,6 +463,7 @@ async function runCodex(
 ): Promise<{
   exitCode: number | null;
   events: string;
+  eventTiming: Array<{ end_byte_offset: number; elapsed_ms: number }>;
   elapsedMs: number;
   error?: string;
   usage: ReturnType<typeof eventMetrics>["usage"];
@@ -531,7 +535,17 @@ async function runCodex(
   const started = Date.now();
   const child = spawn("docker", args, { stdio: ["pipe", "pipe", "inherit"] });
   const chunks: Buffer[] = [];
-  child.stdout.on("data", (chunk: Buffer) => chunks.push(chunk));
+  const eventTiming: Array<{ end_byte_offset: number; elapsed_ms: number }> =
+    [];
+  let byteOffset = 0;
+  child.stdout.on("data", (chunk: Buffer) => {
+    chunks.push(chunk);
+    byteOffset += chunk.length;
+    eventTiming.push({
+      end_byte_offset: byteOffset,
+      elapsed_ms: Date.now() - started,
+    });
+  });
   child.stdin.on("error", () => {});
   child.stdin.end(prompt);
 
@@ -610,6 +624,7 @@ async function runCodex(
   return {
     ...result,
     events,
+    eventTiming,
     usage: metrics.usage,
     memoryCalls: metrics.memoryCalls,
     retrievedTaskIds: metrics.retrievedTaskIds,
@@ -906,6 +921,8 @@ async function performAttempt(
   await writeFile(configPath, codexConfig(arm), { mode: 0o444 });
   await chmod(configPath, 0o444);
   let events = "";
+  let eventTiming:
+    Array<{ end_byte_offset: number; elapsed_ms: number }> | undefined;
   let patch: string | null = null;
   let exitCode: number | null = null;
   let elapsedMs = 0;
@@ -934,7 +951,8 @@ async function performAttempt(
       neo4jPassword,
       openRouterKey,
     );
-    ({ exitCode, events, elapsedMs, error, containerAudit } = result);
+    ({ exitCode, events, eventTiming, elapsedMs, error, containerAudit } =
+      result);
     metrics = {
       usage: result.usage,
       memoryCalls: result.memoryCalls,
@@ -953,6 +971,7 @@ async function performAttempt(
         exit_code: exitCode,
         elapsed_ms: elapsedMs,
         events,
+        event_timing: eventTiming,
         patch,
         failure_kind:
           containerAudit && !containerAudit.ok

@@ -219,18 +219,21 @@ test(
         "truncated",
         "truncationReason",
       ]);
-      assert.deepEqual(recalledJson.columns, [
-        "taskId",
-        "action",
-        "result",
-        "inference",
-        "outdatedReason",
-      ]);
+      assert.deepEqual(
+        [...recalledJson.columns].sort(),
+        ["taskId", "action", "result", "inference", "outdatedReason"].sort(),
+      );
       assert.equal(recalledJson.rows.length, 1);
-      assert.equal(recalledJson.rows[0][2], "failed");
-      assert.equal(recalledJson.rows[0][3], "Cookie auth handles this route");
+      const recalledRow = Object.fromEntries(
+        recalledJson.columns.map((column, index) => [
+          column,
+          recalledJson.rows[0][index],
+        ]),
+      );
+      assert.equal(recalledRow.result, "failed");
+      assert.equal(recalledRow.inference, "Cookie auth handles this route");
       assert.equal(
-        recalledJson.rows[0][4],
+        recalledRow.outdatedReason,
         "Header-based auth replaced the cookie path",
       );
       assert.equal(recalledJson.truncated, false);

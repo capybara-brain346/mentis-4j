@@ -134,6 +134,7 @@ test("failed attempts retain logs, patches, predictions, and explicit no-patch r
       arm: "baseline",
       error: "Codex exited non-zero",
       events: '{"type":"turn.failed"}\n',
+      event_timing: [{ end_byte_offset: 23, elapsed_ms: 1000 }],
       patch,
     });
     await recordAttempt(manifest, runDir, {
@@ -174,6 +175,13 @@ test("failed attempts retain logs, patches, predictions, and explicit no-patch r
     );
     assert.equal(records[1].patch_path, null);
     assert.equal(records[1].prediction_path, null);
+    assert.equal(records[1].event_timing_path, null);
+    assert.deepEqual(
+      JSON.parse(
+        await readFile(join(runDir, records[0].event_timing_path), "utf8"),
+      ),
+      [{ end_byte_offset: 23, elapsed_ms: 1000 }],
+    );
 
     const first = outputPaths(runDir, "target-01", 1);
     const second = outputPaths(runDir, "target-01", 2);
