@@ -24,8 +24,12 @@ const hooks = registerHooks({
 const { AuthorizationError, getOAuthApi } = await import(
   "@cloudflare/workers-oauth-provider"
 );
-const { handleAuthorizationPost, handleGoogleCallback, renderBrowserError } =
-  await import("../dist/auth/oauth.js");
+const {
+  handleAuthorizationGet,
+  handleAuthorizationPost,
+  handleGoogleCallback,
+  renderBrowserError,
+} = await import("../dist/auth/oauth.js");
 hooks.deregister();
 
 import {
@@ -195,6 +199,44 @@ test("Google OIDC adapter sends the verifier checked by the token endpoint", asy
   );
 });
 
+test("Consent policy permits Google and only the requested client origin", async () => {
+  for (const redirectUri of [
+    "https://chatgpt.com/connector/callback?state=private",
+    "http://localhost:3456/callback",
+    "https://client.example/callback%27%3B?next=https://unrelated.example",
+  ]) {
+    const authRequest = { clientId: "trusted", redirectUri, scope: [] };
+    const response = await handleAuthorizationGet(
+      new Request("https://mentis.example/authorize"),
+      {
+        DB: {},
+        OAUTH_PROVIDER: {
+          async parseAuthRequest() {
+            return authRequest;
+          },
+          async describeConsent() {
+            return {
+              clientName: "Trusted client",
+              redirectHost: new URL(redirectUri).hostname,
+              scope: [],
+            };
+          },
+          async beginConsent() {
+            return { handle: "handle", headers: new Headers() };
+          },
+        },
+      },
+    );
+    assert.equal(response.status, 200);
+    assert.equal(
+      response.headers.get("content-security-policy"),
+      `default-src 'none'; form-action 'self' https://accounts.google.com ${new URL(redirectUri).origin}; base-uri 'none'; frame-ancestors 'none'`,
+    );
+    assert.equal(response.headers.get("x-frame-options"), "DENY");
+    assert.equal(response.headers.get("cache-control"), "no-store");
+  }
+});
+
 test("Consent approval precedes provider upstream storage", async (context) => {
   mockGoogleEndpoints(context);
   const calls = [];
@@ -334,11 +376,13 @@ test("Upstream storage outages remain distinct from invalid browser input", asyn
     (error) => error === outage,
   );
   assert.equal(renderBrowserError(outage).status, 503);
+  const invalidRequest = renderBrowserError(
+    new AuthorizationError("invalid_request", { description: "Expired" }),
+  );
+  assert.equal(invalidRequest.status, 400);
   assert.equal(
-    renderBrowserError(
-      new AuthorizationError("invalid_request", { description: "Expired" }),
-    ).status,
-    400,
+    invalidRequest.headers.get("content-security-policy"),
+    "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
   );
 });
 

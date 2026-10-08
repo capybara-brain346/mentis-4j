@@ -265,9 +265,9 @@ test("Worker uses consent-first upstream sign-in and real MCP tokens", {
       assert.match(html, /localhost/);
       assert.match(html, /app on your computer/);
       assert.equal(response.headers.get("x-frame-options"), "DENY");
-      assert.match(
+      assert.equal(
         response.headers.get("content-security-policy"),
-        /form-action 'self'/,
+        "default-src 'none'; form-action 'self' https://accounts.google.com http://localhost:3456; base-uri 'none'; frame-ancestors 'none'",
       );
       assert.equal(response.headers.get("cache-control"), "no-store");
       return {

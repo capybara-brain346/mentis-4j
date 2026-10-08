@@ -555,7 +555,11 @@ ${details.redirectIsLoopback ? "<p>This sends access to an app on your computer.
   <button type="submit" name="decision" value="cancel">Cancel</button>
 </form></html>`;
   const headers = new Headers(consent.headers);
-  setSecurityHeaders(headers);
+  // Chrome also checks form-action on redirects after form submission.
+  setSecurityHeaders(
+    headers,
+    `'self' https://accounts.google.com ${new URL(authRequest.redirectUri).origin}`,
+  );
   return new Response(html, { status: 200, headers });
 }
 
@@ -876,11 +880,11 @@ function sameOriginPost(request: Request, env: WorkerEnvironment): boolean {
   return request.headers.get("Origin") === publicOrigin(env);
 }
 
-function setSecurityHeaders(headers: Headers): void {
+function setSecurityHeaders(headers: Headers, formAction = "'self'"): void {
   headers.set("Content-Type", "text/html; charset=utf-8");
   headers.set(
     "Content-Security-Policy",
-    "default-src 'none'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
+    `default-src 'none'; form-action ${formAction}; base-uri 'none'; frame-ancestors 'none'`,
   );
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("X-Frame-Options", "DENY");
