@@ -14,7 +14,7 @@
       "package.json",
       "tsconfig.json",
       "wrangler.jsonc",
-      "apps/landing/**"
+      "frontend/**"
     ]
   },
   "formatter": {
@@ -112,7 +112,7 @@
         "useNamespaceKeyword": "error"
       }
     },
-    "includes": ["src/**", "apps/landing/**"]
+    "includes": ["src/**", "frontend/**"]
   },
   "javascript": {
     "formatter": {

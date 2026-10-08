@@ -3,7 +3,7 @@
 Biome 2.5.15 runs lint, format, and import order checks. Both npm packages pin
 the same version. TypeScript still runs type checks and builds the server.
 
-Run these commands from the repository root or from `apps/landing`:
+Run these commands from the repository root or from `frontend`:
 
 | Command | Action |
 | --- | --- |
@@ -15,7 +15,7 @@ Run these commands from the repository root or from `apps/landing`:
 | `npm run typecheck` | Check TypeScript types. |
 
 Root Biome commands cover the server and landing app. Commands in
-`apps/landing` cover only that app. The Git commit hook runs the root
+`frontend` cover only that app. The Git commit hook runs the root
 `npm run check`, then `npm test`.
 
 ```text

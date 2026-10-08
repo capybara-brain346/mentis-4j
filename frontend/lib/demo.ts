@@ -1,4 +1,4 @@
-import type { RecordAttemptInput, SearchInput } from "../../../src/lib/graph";
+import type { RecordAttemptInput, SearchInput } from "../../src/lib/graph";
 
 export const sourceUrl = "https://github.com/capybara-brain346/mentis-4j";
 export const exampleRepository = "https://github.com/example/river-app";

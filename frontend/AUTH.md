@@ -20,7 +20,7 @@ Browser -> Next /api/auth/logout      -> Worker /api/logout -> revoke browser se
 
 ## Configuration
 
-1. Set `MENTIS_BACKEND_URL` in the Next server environment (or `apps/landing/.env.local`). Use the Worker's canonical origin, without a path:
+1. Set `MENTIS_BACKEND_URL` in the Next server environment (or `frontend/.env.local`). Use the Worker's canonical origin, without a path:
 
    ```dotenv
    MENTIS_BACKEND_URL=https://mentis-4j.choudhari-piyush.workers.dev
@@ -39,7 +39,7 @@ Browser -> Next /api/auth/logout      -> Worker /api/logout -> revoke browser se
 
 For a local frontend at `http://127.0.0.1:6969`, set `FRONTEND_BASE_URL=http://127.0.0.1:6969` on Next and the Worker. A local Worker must also use its local origin as `PUBLIC_BASE_URL`; point `MENTIS_BACKEND_URL` to that origin. Do not put local origins in production configuration.
 
-The deployed Worker currently uses `http://127.0.0.1:6969` for the user's local frontend. The local `apps/landing/.env.local` points Next to that Worker. This is a local development connection, not a deployed public frontend.
+The deployed Worker currently uses `http://127.0.0.1:6969` for the user's local frontend. The local `frontend/.env.local` points Next to that Worker. This is a local development connection, not a deployed public frontend.
 
 Missing backend configuration and provider failures show a retry message. They never create an example session as a substitute for live sign-in.
 
@@ -73,9 +73,9 @@ MCP callback -> handleGoogleCallback -> finishGoogleSignIn [unchanged]
 ```sh
 npm run typecheck
 npm test
-npm --prefix apps/landing run typecheck
-npm --prefix apps/landing run test:auth
-npm --prefix apps/landing run check:account
+npm --prefix frontend run typecheck
+npm --prefix frontend run test:auth
+npm --prefix frontend run check:account
 ```
 
 The Worker tests use Google fixtures and local D1. The account browser check starts a Next server and a backend fixture. It checks cookie forwarding, account reload, disconnect failure and retry, logout, preview separation, and desktop/mobile accessibility. These checks do not verify a real Google account or a deployed service.

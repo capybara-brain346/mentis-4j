@@ -6,7 +6,7 @@ import { chromium } from "playwright";
 import { mcpServerUrl } from "../lib/demo.ts";
 
 const baseURL = process.env.LANDING_URL ?? "http://127.0.0.1:3000";
-const output = resolve("../../.impeccable/review/access");
+const output = resolve("../.impeccable/review/access");
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const report = [];

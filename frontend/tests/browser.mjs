@@ -11,13 +11,13 @@ import {
 } from "../lib/demo.ts";
 
 const workerConfig = JSON.parse(
-  await readFile(new URL("../../../wrangler.jsonc", import.meta.url), "utf8"),
+  await readFile(new URL("../../wrangler.jsonc", import.meta.url), "utf8"),
 );
 assert.equal(mcpServerUrl, `${workerConfig.vars.PUBLIC_BASE_URL}/mcp`);
 assert.equal(JSON.parse(clientConfig).mcpServers.mentis.url, mcpServerUrl);
 
 const baseUrl = process.env.LANDING_URL ?? "http://127.0.0.1:3000";
-const output = resolve("../../.impeccable/review");
+const output = resolve("../.impeccable/review");
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({
   ...(process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
