@@ -1,3 +1,4 @@
+import { CONFIG } from "../../src/config/config.ts";
 import type { RecordAttemptInput, SearchInput } from "../../src/lib/graph";
 
 export const sourceUrl = "https://github.com/capybara-brain346/mentis-4j";
@@ -34,8 +35,10 @@ export const exampleSearch = {
   limit: 3,
 } satisfies SearchInput;
 
-export const mcpServerUrl =
-  "https://mentis-4j.choudhari-piyush.workers.dev/mcp";
+export const mcpServerUrl = new URL(
+  CONFIG.worker.mcpPath,
+  CONFIG.worker.publicBaseUrl,
+).href;
 
 export const clientConfig = JSON.stringify(
   { mcpServers: { mentis: { url: mcpServerUrl } } },

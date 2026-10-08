@@ -34,7 +34,10 @@ export const CONFIG = {
     defaultLevel: "debug",
     levels: { debug: 0, info: 1, error: 2 },
   },
-  worker: { mcpPath: "/mcp" },
+  worker: {
+    publicBaseUrl: "https://mcp.men-tis.xyz",
+    mcpPath: "/mcp",
+  },
 } as const;
 
 const logLevelSchema = z.enum(["debug", "info", "error"]);

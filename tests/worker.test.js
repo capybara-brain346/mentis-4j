@@ -61,6 +61,10 @@ test("Worker protects MCP access and serves browser routes", {
       storage,
       "--var",
       `PUBLIC_BASE_URL:${origin}`,
+      "--local-upstream",
+      new URL(origin).host,
+      "--upstream-protocol",
+      new URL(origin).protocol.slice(0, -1),
     ],
     { stdio: "ignore" },
   );

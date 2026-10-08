@@ -7,7 +7,9 @@ import { AccountProvider } from "@/lib/account";
 import { AccountPreviewProvider } from "@/lib/account-preview";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("http://127.0.0.1:3000"),
+  metadataBase: new URL(
+    process.env.FRONTEND_BASE_URL ?? "http://127.0.0.1:6969",
+  ),
   title: "Mentis — Memory for your coding agent",
   description:
     "Record coding attempts. Find related tasks. Inspect what happened. Mentis stores the evidence behind your agent's work.",

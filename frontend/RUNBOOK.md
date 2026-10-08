@@ -46,4 +46,37 @@ Browser                          Local server
    | Copy writes to local clipboard   |
 ```
 
-Hosting was not selected. Add a public metadata base URL when a deployment URL is known. No deployment settings are included.
+## Cloudflare deployment
+
+The public frontend is `https://men-tis.xyz`. It runs on Cloudflare Workers with vinext. The existing Next development and preview commands remain available.
+
+Run these commands in `frontend`:
+
+```sh
+npm ci
+FRONTEND_BASE_URL=https://men-tis.xyz npm run deploy
+```
+
+`build:cloudflare` runs the existing Next build, builds the Worker with Vite, and copies the generated social image to the static assets. `public/_headers` sets its PNG content type. The Worker cannot read the source image files from the local filesystem. `typecheck` regenerates Next route types because both build tools write them.
+
+`wrangler.jsonc` sets the account, Worker name, custom domain, backend origin, frontend origin, logs, and traces. No frontend secrets or database bindings are needed. The metadata base uses `FRONTEND_BASE_URL`. Set this variable for the production build as shown above; it takes precedence over the local development value in `.env.local`.
+
+```text
+Build:   Next -> generated social image -> Workers static assets
+         Vite + vinext -> frontend Worker
+Runtime: Browser -> frontend Worker -> auth proxy -> backend Worker
+```
+
+The backend origin is `https://mcp.men-tis.xyz`; the MCP endpoint is `https://mcp.men-tis.xyz/mcp`. The root `wrangler.jsonc` records the custom domain and sets `PUBLIC_BASE_URL`. `src/config/config.ts` defines the public backend origin used by the frontend setup instructions. The frontend `wrangler.jsonc` sets `MENTIS_BACKEND_URL` to the same origin.
+
+Before deployment, add `https://mcp.men-tis.xyz/google/callback` to the Google web client's authorized redirect URIs. Set the backend's `FRONTEND_BASE_URL` to the public frontend origin, then deploy it from the repository root with `npm run worker:deploy`. Deploy the frontend after the backend. Keep Google credentials in backend Worker secrets. See `AUTH.md` for the callback and local setup.
+
+After this change, the backend rejects requests to the old `workers.dev` hostname with HTTP 421. Update existing MCP clients to the new endpoint and reconnect. Browser sessions on the old backend hostname do not transfer to the new hostname. No database migration or deletion is needed.
+
+After deployment, check the public page and static assets:
+
+```sh
+LANDING_URL=https://men-tis.xyz npm run check:browser
+```
+
+This check does not complete real Google sign-in.

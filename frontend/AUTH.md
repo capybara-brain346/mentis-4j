@@ -23,23 +23,32 @@ Browser -> Next /api/auth/logout      -> Worker /api/logout -> revoke browser se
 1. Set `MENTIS_BACKEND_URL` in the Next server environment (or `frontend/.env.local`). Use the Worker's canonical origin, without a path:
 
    ```dotenv
-   MENTIS_BACKEND_URL=https://mentis-4j.choudhari-piyush.workers.dev
-   FRONTEND_BASE_URL=https://mentis.example
+   MENTIS_BACKEND_URL=https://mcp.men-tis.xyz
+   FRONTEND_BASE_URL=https://men-tis.xyz
    ```
 
-2. Set the same `FRONTEND_BASE_URL` in the Worker environment. Use the frontend's exact origin, such as `https://mentis.example`. Keep `PUBLIC_BASE_URL` set to the Worker's canonical origin. Deploy the updated Worker code and configuration. No D1 schema change is needed; the existing `auth_transactions` table stores short-lived browser sign-in requests.
-3. Keep the existing Google web-client redirect URI:
+2. Set the same `FRONTEND_BASE_URL` in the Worker environment. Use the frontend's exact origin, `https://men-tis.xyz`. Keep `PUBLIC_BASE_URL` set to the Worker's canonical origin. Deploy the updated Worker code and configuration. No D1 schema change is needed; the existing `auth_transactions` table stores short-lived browser sign-in requests.
+3. Before deployment, add this authorized redirect URI to the Google web client:
 
    ```text
-   https://mentis-4j.choudhari-piyush.workers.dev/google/callback
+   https://mcp.men-tis.xyz/google/callback
    ```
 
-   Both browser and MCP sign-in use this registered Worker callback. Browser sign-in then returns through the frontend callback, where its HttpOnly state cookie is checked. No additional Google redirect registration is needed. Set the appropriate Google test users and audience. Keep `GOOGLE_CLIENT_SECRET` in Worker secrets only.
+   Both browser and MCP sign-in use this registered Worker callback. Browser sign-in then returns through the frontend callback, where its HttpOnly state cookie is checked. The frontend callback does not need a separate Google redirect registration. Set the appropriate Google test users and audience. Keep `GOOGLE_CLIENT_SECRET` in Worker secrets only.
 4. Restart the Next server after changing its environment. Use HTTPS in production. Loopback HTTP origins are accepted for local checks. Use the same hostname and port in `FRONTEND_BASE_URL`, the browser, and the Google redirect registration.
 
 For a local frontend at `http://127.0.0.1:6969`, set `FRONTEND_BASE_URL=http://127.0.0.1:6969` on Next and the Worker. A local Worker must also use its local origin as `PUBLIC_BASE_URL`; point `MENTIS_BACKEND_URL` to that origin. Do not put local origins in production configuration.
 
-The deployed Worker currently uses `http://127.0.0.1:6969` for the user's local frontend. The local `frontend/.env.local` points Next to that Worker. This is a local development connection, not a deployed public frontend.
+With a custom domain in Wrangler routes, set the local upstream explicitly so Wrangler does not replace the local request origin with the production hostname. Run this from the repository root:
+
+```sh
+npm run worker:dev -- --ip 127.0.0.1 --port 8787 \
+  --local-upstream 127.0.0.1:8787 --upstream-protocol http \
+  --var PUBLIC_BASE_URL:http://127.0.0.1:8787 \
+  --var FRONTEND_BASE_URL:http://127.0.0.1:6969
+```
+
+The production frontend is `https://men-tis.xyz`. Both Workers use that origin as `FRONTEND_BASE_URL`. The frontend Worker uses `https://mcp.men-tis.xyz` as `MENTIS_BACKEND_URL`. MCP clients use `https://mcp.men-tis.xyz/mcp`. For local sign-in, use a local backend with a matching local frontend origin; production sign-in returns to the public frontend. Cookies on the old frontend hostname do not transfer to the new hostname; sign in again on the new domain.
 
 Missing backend configuration and provider failures show a retry message. They never create an example session as a substitute for live sign-in.
 

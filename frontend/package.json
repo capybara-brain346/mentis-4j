@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1 --port 6969",
     "build": "next build",
+    "dev:cloudflare": "vite --host 127.0.0.1 --port 6969",
+    "build:cloudflare": "npm run build && vite build && cp .next/server/app/opengraph-image.body dist/client/opengraph-image",
+    "deploy": "npm run build:cloudflare && wrangler deploy",
     "preview": "next start --hostname 127.0.0.1 --port 3000",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "lint": "biome lint .",
     "format": "biome format .",
     "format:write": "biome format --write .",
@@ -32,12 +35,17 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@biomejs/biome": "2.5.15",
+    "@cloudflare/vite-plugin": "^1.63.0",
     "@tailwindcss/postcss": "^4.1.0",
     "@types/node": "^22.0.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-rsc": "^0.5.36",
     "playwright": "^1.63.0",
     "tailwindcss": "^4.1.0",
-    "typescript": "^5.9.0"
+    "typescript": "^5.9.0",
+    "vinext": "^1.0.1",
+    "vite": "^8.3.4",
+    "wrangler": "^4.148.0"
   }
 }
