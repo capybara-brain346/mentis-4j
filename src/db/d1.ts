@@ -122,6 +122,7 @@ export interface BrowserSession {
   id: string;
   userId: string;
   workspaceId: string;
+  workspaceName: string;
   displayName: string;
   email: string;
   expiresAt: string;
@@ -164,15 +165,7 @@ interface AccountRow {
   workspaceUpdatedAt: string;
 }
 
-interface SessionRow {
-  id: string;
-  userId: string;
-  workspaceId: string;
-  displayName: string;
-  email: string;
-  expiresAt: string;
-  createdAt: string;
-}
+type SessionRow = BrowserSession;
 
 export class D1Store {
   constructor(private readonly database: D1DatabaseBinding) {}
@@ -282,6 +275,55 @@ export class D1Store {
     };
   }
 
+  async createBrowserSignIn(input: {
+    state: string;
+    nonce: string;
+    verifier: string;
+  }): Promise<void> {
+    const now = new Date().toISOString();
+    const results = await this.database.batch([
+      this.database
+        .prepare(
+          "DELETE FROM auth_transactions WHERE transaction_type = 'browser-sign-in' AND expires_at <= ?",
+        )
+        .bind(now),
+      this.database
+        .prepare(`
+        INSERT INTO auth_transactions
+          (id, transaction_type, state_hash, nonce, validated_request, expires_at)
+        VALUES (?, 'browser-sign-in', ?, ?, ?, ?)
+      `)
+        .bind(
+          crypto.randomUUID(),
+          await hashSecret(input.state),
+          input.nonce,
+          input.verifier,
+          new Date(Date.now() + 600_000).toISOString(),
+        ),
+    ]);
+    for (const result of results) assertSuccess(result);
+  }
+
+  async consumeBrowserSignIn(state: string): Promise<{
+    nonce: string;
+    verifier: string;
+  } | null> {
+    return first(
+      this.database
+        .prepare(`
+      UPDATE auth_transactions SET consumed_at = ?
+      WHERE state_hash = ? AND transaction_type = 'browser-sign-in'
+        AND consumed_at IS NULL AND expires_at > ?
+      RETURNING nonce, validated_request AS verifier
+    `)
+        .bind(
+          new Date().toISOString(),
+          await hashSecret(state),
+          new Date().toISOString(),
+        ),
+    );
+  }
+
   async createBrowserSession(input: {
     userId: string;
     expiresAt: string;
@@ -333,6 +375,7 @@ export class D1Store {
             s.id AS id,
             u.id AS userId,
             w.id AS workspaceId,
+            w.name AS workspaceName,
             u.display_name AS displayName,
             u.email AS email,
             s.expires_at AS expiresAt,

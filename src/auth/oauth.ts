@@ -11,9 +11,14 @@ import {
   calculatePKCECodeChallenge,
   randomNonce,
   randomPKCECodeVerifier,
+  randomState,
 } from "openid-client";
 import { CONFIG } from "../config/config.js";
-import { D1Store, type OAuthAccessContext } from "../db/d1.js";
+import {
+  type BrowserSession,
+  D1Store,
+  type OAuthAccessContext,
+} from "../db/d1.js";
 import {
   createGoogleAuthorizationRequest,
   createGoogleConfiguration,
@@ -25,12 +30,14 @@ const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 const PENDING_CONSENT_TTL_SECONDS = 10 * 60;
 const CONSENT_VERSION = "1";
 const SESSION_COOKIE = "__Host-mentis-session";
+const SIGN_IN_COOKIE = "__Host-mentis-sign-in";
 
 export type WorkerEnvironment = Pick<Env, "DB" | "OAUTH_KV"> & {
   OAUTH_PROVIDER?: OAuthHelpers;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   PUBLIC_BASE_URL?: string;
+  FRONTEND_BASE_URL?: string;
   BROWSER_SESSION_TTL_SECONDS?: string;
   NEO4J_URI?: string;
   NEO4J_USERNAME?: string;
@@ -187,12 +194,169 @@ export async function handleGoogleCallback(
   request: Request,
   env: WorkerEnvironment,
 ): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  if (params.get("state")?.startsWith("browser-")) {
+    const callback = new URL(frontendUrl(env, "/api/auth/callback"));
+    callback.search = params.toString();
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: callback.href,
+        "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer",
+      },
+    });
+  }
   return finishGoogleSignIn(
     request,
     env,
     requireOAuthProvider(env),
     new D1Store(env.DB),
   );
+}
+
+export async function handleBrowserSignIn(
+  _request: Request,
+  env: WorkerEnvironment,
+): Promise<Response> {
+  frontendUrl(env, "/api/auth/callback");
+  const redirectUri = callbackUrl(env);
+  const configuration = await createGoogleConfiguration(
+    requiredEnv(env.GOOGLE_CLIENT_ID, "GOOGLE_CLIENT_ID"),
+    requiredEnv(env.GOOGLE_CLIENT_SECRET, "GOOGLE_CLIENT_SECRET"),
+  );
+  const state = `browser-${randomState()}`;
+  const nonce = randomNonce();
+  const verifier = randomPKCECodeVerifier();
+  const challenge = await calculatePKCECodeChallenge(verifier);
+  await new D1Store(env.DB).createBrowserSignIn({ state, nonce, verifier });
+  const url = createGoogleAuthorizationRequest(
+    configuration,
+    redirectUri,
+    state,
+    nonce,
+    challenge,
+  );
+  return new Response(null, {
+    status: 302,
+    headers: {
+      Location: url.href,
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+      "Set-Cookie": `${SIGN_IN_COOKIE}=${state}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=600`,
+    },
+  });
+}
+
+export async function handleBrowserCallback(
+  request: Request,
+  env: WorkerEnvironment,
+): Promise<Response> {
+  const params = new URL(request.url).searchParams;
+  const state = params.get("state");
+  const headers = new Headers({
+    "Cache-Control": "no-store",
+    "Referrer-Policy": "no-referrer",
+    "Set-Cookie": `${SIGN_IN_COOKIE}=; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=0`,
+  });
+  headers.set("Location", frontendUrl(env, "/sign-in?error=failed"));
+  if (!state || state !== cookieValue(request, SIGN_IN_COOKIE)) {
+    return new Response(null, { status: 302, headers });
+  }
+  try {
+    const store = new D1Store(env.DB);
+    const transaction = await store.consumeBrowserSignIn(state);
+    if (!transaction) return new Response(null, { status: 302, headers });
+    if (params.has("error")) {
+      headers.set("Location", frontendUrl(env, "/sign-in?error=cancelled"));
+      return new Response(null, { status: 302, headers });
+    }
+    const callback = new URL(callbackUrl(env));
+    callback.search = params.toString();
+    const configuration = await createGoogleConfiguration(
+      requiredEnv(env.GOOGLE_CLIENT_ID, "GOOGLE_CLIENT_ID"),
+      requiredEnv(env.GOOGLE_CLIENT_SECRET, "GOOGLE_CLIENT_SECRET"),
+    );
+    const profile = await exchangeGoogleCode(
+      configuration,
+      callback,
+      state,
+      transaction.nonce,
+      transaction.verifier,
+    );
+    const account = await store.getOrCreateGoogleAccount(profile);
+    const ttl = browserSessionTtl(env);
+    const session = await store.createBrowserSession({
+      userId: account.user.id,
+      expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
+    });
+    appendSetCookie(headers, sessionCookie(session.secret, ttl));
+    headers.set("Location", frontendUrl(env, "/account"));
+  } catch {
+    // Never include upstream codes, tokens, or account data in the error response.
+  }
+  return new Response(null, { status: 302, headers });
+}
+
+export async function handleAccountApiGet(
+  request: Request,
+  env: WorkerEnvironment,
+): Promise<Response> {
+  const session = await readSession(request, new D1Store(env.DB));
+  if (!session) return apiResponse({ error: "Sign-in required" }, 401);
+  return apiResponse({
+    name: session.displayName,
+    email: session.email,
+    workspace: session.workspaceName,
+    workspaceId: session.workspaceId,
+    expiresAt: session.expiresAt,
+  });
+}
+
+export async function handleConnectionsApiGet(
+  request: Request,
+  env: WorkerEnvironment,
+): Promise<Response> {
+  const store = new D1Store(env.DB);
+  const session = await readSession(request, store);
+  if (!session) return apiResponse({ error: "Sign-in required" }, 401);
+  const consents = await store.listActiveConsents(session.userId);
+  const newest = new Map<string, (typeof consents)[number]>();
+  for (const consent of consents) {
+    if (!newest.has(consent.clientId)) newest.set(consent.clientId, consent);
+  }
+  const oauth = requireOAuthProvider(env);
+  const connections = await Promise.all(
+    [...newest.values()].map(async (consent) => ({
+      id: consent.id,
+      name:
+        (await oauth.lookupClient(consent.clientId))?.clientName ??
+        consent.clientId,
+      description: "Registered client. Name is not verified.",
+      status: "active",
+      connected: consent.createdAt,
+      expires: consent.expiresAt,
+    })),
+  );
+  return apiResponse(connections);
+}
+
+function apiResponse(data: unknown, status = 200): Response {
+  return Response.json(data, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
+}
+
+function frontendUrl(env: WorkerEnvironment, path: string): string {
+  const origin = publicOrigin({
+    ...env,
+    PUBLIC_BASE_URL: requiredEnv(env.FRONTEND_BASE_URL, "FRONTEND_BASE_URL"),
+  });
+  return new URL(path, origin).href;
 }
 
 export async function handleAccountGet(
@@ -521,6 +685,12 @@ async function disconnectClient(
     }
     cursor = page.cursor;
   } while (cursor);
+  if (new URL(request.url).pathname === "/api/connections/disconnect") {
+    return new Response(null, {
+      status: 204,
+      headers: { "Cache-Control": "no-store" },
+    });
+  }
   return new Response(null, {
     status: 303,
     headers: { Location: "/connections", "Cache-Control": "no-store" },
@@ -537,9 +707,11 @@ async function logout(
   const secret = cookieValue(request, SESSION_COOKIE);
   if (secret) await store.revokeBrowserSession(secret);
   return new Response(null, {
-    status: 303,
+    status: new URL(request.url).pathname === "/api/logout" ? 204 : 303,
     headers: {
-      Location: "/",
+      ...(new URL(request.url).pathname === "/api/logout"
+        ? {}
+        : { Location: "/" }),
       "Cache-Control": "no-store",
       "Set-Cookie": clearSessionCookie(),
     },
@@ -549,15 +721,7 @@ async function logout(
 async function readSession(
   request: Request,
   store: D1Store,
-): Promise<{
-  id: string;
-  userId: string;
-  workspaceId: string;
-  displayName: string;
-  email: string;
-  expiresAt: string;
-  createdAt: string;
-} | null> {
+): Promise<BrowserSession | null> {
   const secret = cookieValue(request, SESSION_COOKIE);
   return secret ? store.getBrowserSession(secret) : null;
 }

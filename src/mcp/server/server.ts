@@ -3,9 +3,13 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import {
   type BrowserRequestHandler,
   createOAuthProvider,
+  handleAccountApiGet,
   handleAccountGet,
   handleAuthorizationGet,
   handleAuthorizationPost,
+  handleBrowserCallback,
+  handleBrowserSignIn,
+  handleConnectionsApiGet,
   handleConnectionsGet,
   handleDisconnectPost,
   handleGoogleCallback,
@@ -23,6 +27,12 @@ import { logger } from "../../lib/logger.js";
 import { registerTools } from "../../lib/tools.js";
 
 const browserRoutes: Record<string, BrowserRequestHandler> = {
+  "GET /api/sign-in": handleBrowserSignIn,
+  "GET /api/google/callback": handleBrowserCallback,
+  "GET /api/account": handleAccountApiGet,
+  "GET /api/connections": handleConnectionsApiGet,
+  "POST /api/connections/disconnect": handleDisconnectPost,
+  "POST /api/logout": handleLogoutPost,
   "GET /authorize": handleAuthorizationGet,
   "POST /authorize": handleAuthorizationPost,
   "GET /google/callback": handleGoogleCallback,

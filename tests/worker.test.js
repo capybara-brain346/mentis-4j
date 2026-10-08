@@ -8,7 +8,7 @@ import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
-import { initializeD1Schema } from "../dist/db/d1.js";
+import { D1Store, initializeD1Schema } from "../dist/db/d1.js";
 import {
   googleClientId,
   googleClientSecret,
@@ -174,6 +174,7 @@ test("Worker uses consent-first upstream sign-in and real MCP tokens", {
       kvPersist: storage,
       bindings: {
         PUBLIC_BASE_URL: origin,
+        FRONTEND_BASE_URL: "https://console.example",
         GOOGLE_CLIENT_ID: googleClientId,
         GOOGLE_CLIENT_SECRET: googleClientSecret,
         BROWSER_SESSION_TTL_SECONDS: "3600",
@@ -190,12 +191,12 @@ test("Worker uses consent-first upstream sign-in and real MCP tokens", {
         if (request.url === googleTokenUrl) {
           tokenRequests++;
           const parameters = new URLSearchParams(await request.text());
-          assert.equal(
-            parameters.get("redirect_uri"),
-            `${origin}/google/callback`,
-          );
           const fixture = googleCodes.get(parameters.get("code"));
           assert.ok(fixture);
+          assert.equal(
+            parameters.get("redirect_uri"),
+            fixture.redirectUri ?? `${origin}/google/callback`,
+          );
           const reply = googleTokenReply(parameters, fixture, fixture.claims);
           return Response.json(reply.data, { status: reply.statusCode });
         }
@@ -659,6 +660,202 @@ test("Worker uses consent-first upstream sign-in and real MCP tokens", {
     );
     assert.equal(
       (await send("/account", { headers: { Cookie: sessionCookie } })).status,
+      401,
+    );
+
+    assert.equal((await send("/api/account")).status, 401);
+    assert.equal((await send("/api/connections")).status, 401);
+    const startBrowser = async (code) => {
+      const start = await send("/api/sign-in");
+      assert.equal(start.status, 302);
+      const google = new URL(start.headers.get("location"));
+      assert.equal(
+        google.searchParams.get("redirect_uri"),
+        `${origin}/google/callback`,
+      );
+      assert.equal(google.searchParams.get("code_challenge_method"), "S256");
+      googleCodes.set(code, {
+        state: google.searchParams.get("state"),
+        nonce: google.searchParams.get("nonce"),
+        challenge: google.searchParams.get("code_challenge"),
+        redirectUri: `${origin}/google/callback`,
+        claims: { sub: "browser-user", email: "browser@example.com" },
+      });
+      return {
+        cookie: cookiesFrom(start),
+        state: google.searchParams.get("state"),
+      };
+    };
+    const browser = await startBrowser("browser-code");
+    const callbackPath = `/api/google/callback?state=${browser.state}&code=browser-code`;
+    const requestsBeforeBrowser = tokenRequests;
+    assert.match(browser.state, /^browser-/);
+    const relay = await send(
+      `/google/callback?state=${browser.state}&code=browser-code`,
+    );
+    assert.equal(relay.status, 302);
+    assert.equal(
+      relay.headers.get("location"),
+      `https://console.example/api/auth/callback?state=${browser.state}&code=browser-code`,
+    );
+    assert.equal(relay.headers.get("cache-control"), "no-store");
+    assert.equal(relay.headers.get("referrer-policy"), "no-referrer");
+    assert.equal(relay.headers.getSetCookie().length, 0);
+    assert.equal(tokenRequests, requestsBeforeBrowser);
+    const unbound = await send(callbackPath);
+    assert.equal(
+      unbound.headers.get("location"),
+      "https://console.example/sign-in?error=failed",
+    );
+    assert.equal(tokenRequests, requestsBeforeBrowser);
+    const browserCallback = await send(callbackPath, {
+      headers: { Cookie: browser.cookie },
+    });
+    assert.equal(
+      browserCallback.headers.get("location"),
+      "https://console.example/account",
+    );
+    assert.match(browserCallback.headers.getSetCookie()[0], /Max-Age=0/);
+    assert.match(
+      browserCallback.headers.getSetCookie()[1],
+      /Secure; HttpOnly; SameSite=Lax/,
+    );
+    const browserCookie = cookiesFrom(browserCallback)
+      .split("; ")
+      .find((cookie) => cookie.startsWith("__Host-mentis-session="));
+    const browserAccount = await send("/api/account", {
+      headers: { Cookie: browserCookie },
+    });
+    const accountData = await browserAccount.json();
+    assert.equal(accountData.email, "browser@example.com");
+    assert.equal(accountData.name, "Example User");
+    assert.equal(accountData.workspace, "Private workspace");
+    assert.ok(accountData.workspaceId);
+    assert.equal(accountData.userId, undefined);
+    assert.equal(browserAccount.headers.get("cache-control"), "no-store");
+    assert.deepEqual(
+      await (
+        await send("/api/connections", { headers: { Cookie: browserCookie } })
+      ).json(),
+      [],
+    );
+    const replay = await send(callbackPath, {
+      headers: { Cookie: browser.cookie },
+    });
+    assert.equal(
+      replay.headers.get("location"),
+      "https://console.example/sign-in?error=failed",
+    );
+    assert.equal(tokenRequests, requestsBeforeBrowser + 1);
+
+    const cancelled = await startBrowser("cancelled-code");
+    const deniedBrowser = await send(
+      `/api/google/callback?state=${cancelled.state}&error=access_denied`,
+      { headers: { Cookie: cancelled.cookie } },
+    );
+    assert.equal(
+      deniedBrowser.headers.get("location"),
+      "https://console.example/sign-in?error=cancelled",
+    );
+    assert.equal(tokenRequests, requestsBeforeBrowser + 1);
+    const expiredBrowser = await startBrowser("expired-browser-code");
+    await db
+      .prepare(
+        "UPDATE auth_transactions SET expires_at = ? WHERE transaction_type = 'browser-sign-in'",
+      )
+      .bind(new Date(Date.now() - 1000).toISOString())
+      .run();
+    const expiredBrowserCallback = await send(
+      `/api/google/callback?state=${expiredBrowser.state}&code=expired-browser-code`,
+      { headers: { Cookie: expiredBrowser.cookie } },
+    );
+    assert.equal(
+      expiredBrowserCallback.headers.get("location"),
+      "https://console.example/sign-in?error=failed",
+    );
+    assert.equal(tokenRequests, requestsBeforeBrowser + 1);
+
+    const browserConsent = await consentPage(browserCookie);
+    const browserApproval = await approve(
+      browserConsent,
+      "allow",
+      `${browserConsent.cookie}; ${browserCookie}`,
+    );
+    const browserTokens = await exchange(browserApproval);
+    assert.equal(browserTokens.response.status, 200);
+    const browserConnections = await (
+      await send("/api/connections", { headers: { Cookie: browserCookie } })
+    ).json();
+    assert.equal(browserConnections.length, 1);
+    assert.equal(browserConnections[0].name, "<script>untrusted</script>");
+    assert.equal(browserConnections[0].status, "active");
+    const otherSession = await new D1Store(db).createBrowserSession({
+      userId: consent.user_id,
+      expiresAt: new Date(Date.now() + 60_000).toISOString(),
+    });
+    const otherCookie = `__Host-mentis-session=${otherSession.secret}`;
+    assert.deepEqual(
+      await (
+        await send("/api/connections", { headers: { Cookie: otherCookie } })
+      ).json(),
+      [],
+    );
+    assert.equal(
+      (
+        await send("/api/connections/disconnect", {
+          method: "POST",
+          headers: { Cookie: otherCookie, Origin: origin },
+          body: new URLSearchParams({ consentId: browserConnections[0].id }),
+        })
+      ).status,
+      404,
+    );
+    assert.equal(
+      (
+        await send("/api/connections/disconnect", {
+          method: "POST",
+          headers: { Cookie: browserCookie, Origin: "https://evil.example" },
+          body: new URLSearchParams({ consentId: browserConnections[0].id }),
+        })
+      ).status,
+      403,
+    );
+    assert.equal(
+      (
+        await send("/api/connections/disconnect", {
+          method: "POST",
+          headers: { Cookie: sessionCookie, Origin: origin },
+          body: new URLSearchParams({ consentId: browserConnections[0].id }),
+        })
+      ).status,
+      401,
+    );
+    assert.equal(
+      (
+        await send("/api/connections/disconnect", {
+          method: "POST",
+          headers: { Cookie: browserCookie, Origin: origin },
+          body: new URLSearchParams({ consentId: browserConnections[0].id }),
+        })
+      ).status,
+      204,
+    );
+    assert.equal((await access(browserTokens.data.access_token)).status, 401);
+    assert.deepEqual(
+      await (
+        await send("/api/connections", { headers: { Cookie: browserCookie } })
+      ).json(),
+      [],
+    );
+    const browserLogout = await send("/api/logout", {
+      method: "POST",
+      headers: { Cookie: browserCookie, Origin: origin },
+    });
+    assert.equal(browserLogout.status, 204);
+    assert.match(browserLogout.headers.get("set-cookie"), /Max-Age=0/);
+    assert.equal(
+      (await send("/api/account", { headers: { Cookie: browserCookie } }))
+        .status,
       401,
     );
   } finally {

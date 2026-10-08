@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import "@fontsource-variable/manrope";
 import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
+import "./account.css";
+import { AccountProvider } from "@/lib/account";
+import { AccountPreviewProvider } from "@/lib/account-preview";
 
 export const metadata: Metadata = {
   metadataBase: new URL("http://127.0.0.1:3000"),
@@ -28,7 +31,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AccountPreviewProvider>
+          <AccountProvider>{children}</AccountProvider>
+        </AccountPreviewProvider>
+      </body>
     </html>
   );
 }

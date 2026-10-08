@@ -34,31 +34,13 @@ export const exampleSearch = {
   limit: 3,
 } satisfies SearchInput;
 
-export const installCommands = `git clone ${sourceUrl}.git
-cd mentis-4j
-npm ci
-npm run build`;
+export const mcpServerUrl =
+  "https://mentis-4j.choudhari-piyush.workers.dev/mcp";
 
-export const environmentCommands = `export NEO4J_PASSWORD='replace-with-your-password'
-export OPENROUTER_API_KEY='replace-with-your-key'
-docker compose up -d`;
+export const clientConfig = JSON.stringify(
+  { mcpServers: { mentis: { url: mcpServerUrl } } },
+  null,
+  2,
+);
 
-export const indexCommand = `CREATE VECTOR INDEX attempt_embedding IF NOT EXISTS
-FOR (a:Attempt) ON (a.embedding)
-OPTIONS {indexConfig: {
-  \`vector.dimensions\`: 1024,
-  \`vector.similarity_function\`: 'cosine'
-}};`;
-
-export const clientConfig = `{
-  "mcpServers": {
-    "mentis": {
-      "command": "node",
-      "args": ["/absolute/path/mentis-4j/dist/process/server.js"],
-      "env": {
-        "NEO4J_PASSWORD": "replace-with-your-password",
-        "OPENROUTER_API_KEY": "replace-with-your-key"
-      }
-    }
-  }
-}`;
+export const claudeCommand = `claude mcp add --transport http mentis '${mcpServerUrl}'`;

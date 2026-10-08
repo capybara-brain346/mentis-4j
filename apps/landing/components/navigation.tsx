@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, Menu } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -33,6 +34,7 @@ export function Navigation() {
         <a href={sourceUrl}>
           View source <ArrowUpRight aria-hidden="true" size={14} />
         </a>
+        <Link href="/sign-in">Sign in</Link>
       </nav>
       <Button asChild className="pill header-cta">
         <a href="#setup">Get started</a>
@@ -54,6 +56,9 @@ export function Navigation() {
             <SheetDescription>Memory for your coding agent.</SheetDescription>
           </SheetHeader>
           <nav aria-label="Phone navigation">
+            <SheetClose asChild>
+              <Link href="/sign-in">Sign in</Link>
+            </SheetClose>
             <SheetClose asChild>
               <a href="#how-it-works">How it works</a>
             </SheetClose>

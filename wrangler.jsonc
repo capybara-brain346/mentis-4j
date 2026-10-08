@@ -10,6 +10,7 @@
   "vars": {
     "GOOGLE_CLIENT_ID": "695398101716-32mf826vrldhd3t2n957p0ksighidi7d.apps.googleusercontent.com",
     "PUBLIC_BASE_URL": "https://mentis-4j.choudhari-piyush.workers.dev",
+    "FRONTEND_BASE_URL": "http://127.0.0.1:6969",
     "BROWSER_SESSION_TTL_SECONDS": "604800",
     "NEO4J_URI": "neo4j+s://84372ed8.databases.neo4j.io",
     "NEO4J_USERNAME": "84372ed8",

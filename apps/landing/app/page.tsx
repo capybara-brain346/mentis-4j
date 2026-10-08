@@ -271,12 +271,10 @@ export default function Home() {
                 Give your agent
                 <br />a memory.
               </h2>
-              <p>Run Mentis locally. Connect your coding agent through MCP.</p>
+              <p>Connect your coding agent to the hosted Mentis Worker.</p>
               <ul className="requirements">
-                <li>Node.js 22 or later</li>
-                <li>Docker Compose and Neo4j</li>
-                <li>An OpenRouter API key</li>
-                <li>A trusted MCP client</li>
+                <li>A trusted MCP client with HTTP and OAuth support</li>
+                <li>A Google account</li>
               </ul>
               <p className="setup-note">
                 Search queries and attempt text go to OpenRouter. Keep secrets

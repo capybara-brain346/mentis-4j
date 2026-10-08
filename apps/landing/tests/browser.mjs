@@ -1,15 +1,20 @@
 import assert from "node:assert/strict";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium, request } from "playwright";
 import {
+  claudeCommand,
   clientConfig,
-  environmentCommands,
-  indexCommand,
-  installCommands,
+  mcpServerUrl,
   sourceUrl,
 } from "../lib/demo.ts";
+
+const workerConfig = JSON.parse(
+  await readFile(new URL("../../../wrangler.jsonc", import.meta.url), "utf8"),
+);
+assert.equal(mcpServerUrl, `${workerConfig.vars.PUBLIC_BASE_URL}/mcp`);
+assert.equal(JSON.parse(clientConfig).mcpServers.mentis.url, mcpServerUrl);
 
 const baseUrl = process.env.LANDING_URL ?? "http://127.0.0.1:3000";
 const output = resolve("../../.impeccable/review");
@@ -167,19 +172,16 @@ async function checkPage(name, viewport) {
   );
 
   const setup = page.locator(".setup-panel");
-  const steps = [
-    [null, "Install commands", installCommands],
-    [
-      "Set credentials and start Neo4j",
-      "Database commands",
-      environmentCommands,
-    ],
-    ["Create the search index", "Vector index query", indexCommand],
-    ["Connect your coding agent", "MCP client configuration", clientConfig],
+  const configs = [
+    ["MCP server URL", mcpServerUrl],
+    ["MCP client configuration", clientConfig],
+    ["Claude Code command", claudeCommand],
   ];
-  for (const [trigger, label, code] of steps) {
-    if (trigger)
-      await setup.getByRole("button", { name: new RegExp(trigger) }).click();
+  for (const [label, code] of configs) {
+    assert.equal(
+      await setup.getByLabel(label, { exact: true }).innerText(),
+      code,
+    );
     await setup
       .getByRole("button", { name: `Copy ${label}`, exact: true })
       .click();
@@ -201,11 +203,8 @@ async function checkPage(name, viewport) {
       nodes: v.nodes.map((n) => n.target),
     })),
     [],
-    "Open setup disclosures must pass accessibility checks",
+    "Remote setup must pass accessibility checks",
   );
-  for (const [trigger] of steps.slice(1))
-    await setup.getByRole("button", { name: new RegExp(trigger) }).click();
-
   if (name === "mobile") {
     await page
       .getByRole("button", { name: "Open navigation", exact: true })
@@ -279,7 +278,7 @@ async function checkPage(name, viewport) {
     });
   });
   await setup
-    .getByRole("button", { name: "Copy Install commands", exact: true })
+    .getByRole("button", { name: "Copy MCP server URL", exact: true })
     .click();
   assert.ok(
     await page
