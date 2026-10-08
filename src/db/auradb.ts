@@ -136,15 +136,29 @@ function isWorkspaceRestrictedQuery(query: string): boolean {
   if (clauses.length === 0) return false;
 
   let nodeCount = 0;
+  const scopedVariables = new Set<string>();
   for (const clause of clauses) {
+    const canUseExistingVariables = /^\s*(?:CREATE|MERGE)\b/i.test(clause[0]);
     const nodes = [...clause[1].matchAll(/\(([^()]*)\)/g)];
     for (const node of nodes) {
       nodeCount += 1;
+      const scopedNode = node[1].match(
+        /^\s*(?:([A-Za-z_]\w*)\s*)?:\s*(?:Repository|Task|Attempt)\b/,
+      );
+      if (scopedNode) {
+        if (
+          !/\{[^}]*\bworkspaceId\s*:\s*\$workspaceId\b[^}]*\}/.test(node[1])
+        ) {
+          return false;
+        }
+        if (scopedNode[1]) scopedVariables.add(scopedNode[1]);
+        continue;
+      }
+      const existingVariable = node[1].trim().match(/^([A-Za-z_]\w*)$/);
       if (
-        !/^\s*(?:[A-Za-z_]\w*\s*)?:\s*(?:Repository|Task|Attempt)\b/.test(
-          node[1],
-        ) ||
-        !/\{[^}]*\bworkspaceId\s*:\s*\$workspaceId\b[^}]*\}/.test(node[1])
+        !canUseExistingVariables ||
+        !existingVariable ||
+        !scopedVariables.has(existingVariable[1])
       ) {
         return false;
       }

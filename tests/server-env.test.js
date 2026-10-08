@@ -7,7 +7,7 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
 const server = fileURLToPath(
-  new URL("../dist/process/server.js", import.meta.url),
+  new URL("../dist/mcp/process/server.js", import.meta.url),
 );
 
 test("server loads .env before configuring Neo4j", () => {

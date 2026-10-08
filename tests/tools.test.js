@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { AuraDB } from "../dist/db/auradb.js";
 import { registerTools } from "../dist/lib/tools.js";
 
 const canRun = Boolean(
@@ -75,17 +76,58 @@ test("search requires the caller's repository identity", () => {
   );
 });
 
-test("stdio tools search tasks, record attempts, and run agent-authored recall", {
+test("tools reject workspace overrides and arbitrary recall queries", () => {
+  const schemas = {};
+  registerTools(
+    {
+      registerTool: (name, config) => (schemas[name] = config.inputSchema),
+    },
+    {},
+  );
+  const inputs = {
+    search: { repository: "repo", query: "login" },
+    recall: { repository: "repo", taskId: "task" },
+    record_attempt: {
+      repository: "repo",
+      taskId: "task",
+      codeContext: "test",
+      action: "inspect",
+      affectedFiles: ["test.js"],
+      observation: "failed",
+    },
+    mark_conclusion_outdated: {
+      repository: "repo",
+      attemptId: "attempt",
+      reason: "new evidence",
+    },
+    forget_attempt: { repository: "repo", attemptId: "attempt" },
+  };
+  for (const [name, input] of Object.entries(inputs)) {
+    assert.equal(schemas[name].safeParse(input).success, true);
+    assert.equal(
+      schemas[name].safeParse({ ...input, workspaceId: "other" }).success,
+      false,
+    );
+  }
+  assert.equal(
+    schemas.recall.safeParse({ ...inputs.recall, cypher: "MATCH (n) RETURN n" })
+      .success,
+    false,
+  );
+});
+
+test("stdio tools search tasks, record attempts, and read structured history", {
   skip: !canRun,
 }, async () => {
   const client = new Client({ name: "mcp-test", version: "1.0.0" });
   const transport = new StdioClientTransport({
     command: process.execPath,
-    args: ["dist/process/server.js"],
+    args: ["dist/mcp/process/server.js"],
     env: {
       NEO4J_PASSWORD: process.env.NEO4J_PASSWORD,
       NEO4J_URI: process.env.NEO4J_URI ?? "bolt://127.0.0.1:7687",
       NEO4J_DATABASE: process.env.NEO4J_DATABASE ?? "neo4j",
+      NEO4J_USERNAME: process.env.NEO4J_USERNAME ?? "neo4j",
       OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
     },
   });
@@ -93,7 +135,7 @@ test("stdio tools search tasks, record attempts, and run agent-authored recall",
   const attemptIds = [];
   const shared = {
     repository,
-    taskId: "login-cookie-investigation",
+    taskId: `login-cookie-investigation-${randomUUID()}`,
     codeContext: "Vite at abc123, local HTTP",
     affectedFiles: ["src/Login.tsx"],
   };
@@ -200,54 +242,35 @@ test("stdio tools search tasks, record attempts, and run agent-authored recall",
 
     const recalled = await client.callTool({
       name: "recall",
-      arguments: {
-        cypher: `MATCH (t:Task {identity: $taskId, repositoryIdentity: $repository})-[:HAS_ATTEMPT]->(a:Attempt)
-                   RETURN t.identity AS taskId, a.action AS action, a.checkResult AS result,
-                          a.inference AS inference, a.outdatedReason AS outdatedReason
-                   ORDER BY a.recordedAt`,
-        parameters: { taskId: shared.taskId, repository },
-      },
+      arguments: { repository, taskId: shared.taskId },
     });
     assert.notEqual(recalled.isError, true);
-    assert.equal(recalled.structuredContent, undefined);
-    assert.equal(recalled.content.length, 1);
     const recalledJson = JSON.parse(recalled.content[0].text);
-    assert.deepEqual(Object.keys(recalledJson).sort(), [
-      "columns",
-      "rows",
-      "truncated",
-      "truncationReason",
-    ]);
-    assert.deepEqual(
-      [...recalledJson.columns].sort(),
-      ["taskId", "action", "result", "inference", "outdatedReason"].sort(),
-    );
-    assert.equal(recalledJson.rows.length, 1);
-    const recalledRow = Object.fromEntries(
-      recalledJson.columns.map((column, index) => [
-        column,
-        recalledJson.rows[0][index],
-      ]),
-    );
-    assert.equal(recalledRow.result, "failed");
+    assert.equal(recalled.structuredContent.status, "ok");
+    assert.equal(recalledJson.attempts.length, 1);
+    const [recalledRow] = recalledJson.attempts;
+    assert.equal(recalledRow.check.result, "failed");
     assert.equal(recalledRow.inference, "Cookie auth handles this route");
     assert.equal(
-      recalledRow.outdatedReason,
+      recalledRow.outdated.reason,
       "Header-based auth replaced the cookie path",
     );
     assert.equal(recalledJson.truncated, false);
-    assert.equal(recalledJson.truncationReason, null);
 
-    const boundedResult = await client.callTool({
+    const arbitraryCypher = await client.callTool({
       name: "recall",
-      arguments: { cypher: "UNWIND range(1, 110) AS n RETURN n AS value" },
+      arguments: {
+        repository,
+        taskId: shared.taskId,
+        cypher: "MATCH (n) RETURN n",
+      },
     });
-    assert.notEqual(boundedResult.isError, true);
-    assert.equal(boundedResult.structuredContent, undefined);
-    const bounded = JSON.parse(boundedResult.content[0].text);
-    assert.equal(bounded.rows.length, 100);
-    assert.equal(bounded.truncated, true);
-    assert.equal(bounded.truncationReason, "row_limit");
+    assert.equal(arbitraryCypher.isError, true);
+    const workspaceOverride = await client.callTool({
+      name: "recall",
+      arguments: { repository, taskId: shared.taskId, workspaceId: "other" },
+    });
+    assert.equal(workspaceOverride.isError, true);
 
     const invalid = await client.callTool({
       name: "recall",
@@ -270,5 +293,34 @@ test("stdio tools search tasks, record attempts, and run agent-authored recall",
     assert.equal(invalidLimit.isError, true);
   } finally {
     await client.close();
+    const database = new AuraDB({
+      uri: process.env.NEO4J_URI ?? "bolt://127.0.0.1:7687",
+      username: process.env.NEO4J_USERNAME ?? "neo4j",
+      password: process.env.NEO4J_PASSWORD,
+      database: process.env.NEO4J_DATABASE ?? "neo4j",
+      workspaceId: "local",
+    });
+    try {
+      await database.writeTx((tx) =>
+        tx.run(
+          "MATCH (:Repository {workspaceId: $workspaceId, identity: $repository})-[:HAS_TASK]->(:Task {workspaceId: $workspaceId})-[:HAS_ATTEMPT]->(a:Attempt {workspaceId: $workspaceId}) DETACH DELETE a",
+          { repository },
+        ),
+      );
+      await database.writeTx((tx) =>
+        tx.run(
+          "MATCH (t:Task {workspaceId: $workspaceId, repositoryIdentity: $repository}) DETACH DELETE t",
+          { repository },
+        ),
+      );
+      await database.writeTx((tx) =>
+        tx.run(
+          "MATCH (r:Repository {workspaceId: $workspaceId, identity: $repository}) DETACH DELETE r",
+          { repository },
+        ),
+      );
+    } finally {
+      await database.close();
+    }
   }
 });

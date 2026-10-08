@@ -144,8 +144,10 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-# Plan files
+# Doc files
 docs/planning/
+docs/experiments/
 
 # Impeccable
 .impeccable/
+

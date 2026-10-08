@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import neo4j, { type Record as Neo4jRecord } from "neo4j-driver";
 import { CONFIG } from "../config/config.js";
-import type { Database } from "./db.js";
+import type { AuraDB } from "../db/auradb.js";
 import { type EmbeddingInputType, embedText } from "./embeddings.js";
 import { jevRelevance } from "./jev.js";
 import { logger } from "./logger.js";
@@ -47,8 +47,9 @@ export interface ConclusionCorrection {
 }
 
 export interface RecallInput {
-  cypher: string;
-  parameters?: Record<string, unknown>;
+  repository: string;
+  taskId: string;
+  limit?: number;
 }
 
 export interface SearchInput {
@@ -89,12 +90,13 @@ export interface AttemptRecord {
 }
 
 const recordAttemptQuery = `
-  MERGE (r:Repository {identity: $repository})
-  MERGE (t:Task {identity: $taskId, repositoryIdentity: $repository})
+  MERGE (r:Repository {workspaceId: $workspaceId, identity: $repository})
+  MERGE (t:Task {workspaceId: $workspaceId, identity: $taskId, repositoryIdentity: $repository})
   ON CREATE SET t.createdAt = $recordedAt
   SET t.updatedAt = $recordedAt
   MERGE (r)-[:HAS_TASK]->(t)
   CREATE (a:Attempt {
+    workspaceId: $workspaceId,
     id: $attemptId,
     codeContext: $codeContext,
     action: $action,
@@ -130,7 +132,7 @@ const recordAttemptQuery = `
 `;
 
 const markConclusionOutdatedQuery = `
-  MATCH (:Repository {identity: $repository})-[:HAS_TASK]->(t:Task)-[:HAS_ATTEMPT]->(a:Attempt {id: $attemptId})
+  MATCH (:Repository {workspaceId: $workspaceId, identity: $repository})-[:HAS_TASK]->(t:Task {workspaceId: $workspaceId})-[:HAS_ATTEMPT]->(a:Attempt {workspaceId: $workspaceId, id: $attemptId})
   SET a.outdatedReason = $reason,
       a.outdatedAt = $correctedAt,
       a.latestCommit = coalesce($latestCommit, a.latestCommit, a.outdatedGitCommit)
@@ -155,14 +157,14 @@ const markConclusionOutdatedQuery = `
 `;
 
 const forgetAttemptQuery = `
-  MATCH (:Repository {identity: $repository})-[:HAS_TASK]->(:Task)-[:HAS_ATTEMPT]->(a:Attempt {id: $attemptId})
+  MATCH (:Repository {workspaceId: $workspaceId, identity: $repository})-[:HAS_TASK]->(:Task {workspaceId: $workspaceId})-[:HAS_ATTEMPT]->(a:Attempt {workspaceId: $workspaceId, id: $attemptId})
   WITH a LIMIT 1
   DETACH DELETE a
   RETURN true AS deleted
 `;
 
 const searchQuery = `
-  MATCH (r:Repository {identity: $repository})-[:HAS_TASK]->(t:Task)-[:HAS_ATTEMPT]->(node:Attempt)
+  MATCH (r:Repository {workspaceId: $workspaceId, identity: $repository})-[:HAS_TASK]->(t:Task {workspaceId: $workspaceId})-[:HAS_ATTEMPT]->(node:Attempt {workspaceId: $workspaceId})
   WHERE node.embedding IS NOT NULL
   WITH r, t, node, vector.similarity.cosine(node.embedding, $embedding) AS score
   ORDER BY score DESC
@@ -189,6 +191,31 @@ const searchQuery = `
   ORDER BY similarity DESC
 `;
 
+const recallQuery = `
+  MATCH (r:Repository {workspaceId: $workspaceId, identity: $repository})
+        -[:HAS_TASK]->(t:Task {workspaceId: $workspaceId, identity: $taskId, repositoryIdentity: $repository})
+        -[:HAS_ATTEMPT]->(a:Attempt {workspaceId: $workspaceId})
+  RETURN r.identity AS repository,
+         t.identity AS taskId,
+         a.id AS id,
+         a.codeContext AS codeContext,
+         a.action AS action,
+         a.affectedFiles AS affectedFiles,
+         a.observation AS observation,
+         a.inference AS inference,
+         a.checkMethod AS checkMethod,
+         a.checkResult AS checkResult,
+         a.evidenceReferences AS evidenceReferences,
+         a.recordedAt AS recordedAt,
+         a.gitCommit AS gitCommit,
+         a.gitDirty AS gitDirty,
+         a.outdatedReason AS outdatedReason,
+         a.outdatedAt AS outdatedAt,
+         coalesce(a.latestCommit, a.outdatedGitCommit) AS latestCommit
+  ORDER BY a.recordedAt DESC
+  LIMIT $rowLimit
+`;
+
 interface SearchMatch {
   candidate: SearchCandidate;
   attempt: AttemptRecord;
@@ -196,7 +223,7 @@ interface SearchMatch {
 
 export class MemoryGraph {
   constructor(
-    private readonly database: Database,
+    private readonly database: AuraDB,
     private readonly embed: (
       text: string,
       inputType: EmbeddingInputType,
@@ -272,7 +299,7 @@ export class MemoryGraph {
   ): Promise<void> {
     validateForgetAttempt(input);
     const result = await this.database.writeTx(
-      (transaction) => transaction.run(forgetAttemptQuery, input),
+      (transaction) => transaction.run(forgetAttemptQuery, { ...input }),
       requestId,
     );
     if (result.records.length === 0) {
@@ -386,12 +413,39 @@ export class MemoryGraph {
   }
 
   async recall(input: RecallInput, requestId?: string) {
-    validateRecall(input);
-    return this.database.readCypher(
-      input.cypher,
-      input.parameters ?? {},
+    const limit = input.limit ?? CONFIG.neo4j.maxReadRows;
+    validateRecall(input, limit);
+    const result = await this.database.read(
+      (transaction) =>
+        transaction.run(recallQuery, {
+          repository: input.repository,
+          taskId: input.taskId,
+          rowLimit: neo4j.int(limit + 1),
+        }),
+      undefined,
       requestId,
     );
+    const attempts: AttemptRecord[] = [];
+    let responseBytes = new TextEncoder().encode(
+      JSON.stringify({ attempts: [], truncated: false }),
+    ).length;
+    let truncated = result.records.length > limit;
+    for (const record of result.records.slice(0, limit)) {
+      const attempt = mapAttempt(record);
+      const bytes =
+        new TextEncoder().encode(JSON.stringify(attempt)).length +
+        (attempts.length > 0 ? 1 : 0);
+      if (responseBytes + bytes > CONFIG.neo4j.maxReadResponseBytes) {
+        truncated = true;
+        break;
+      }
+      attempts.push(attempt);
+      responseBytes += bytes;
+    }
+    return {
+      attempts,
+      truncated,
+    };
   }
 }
 
@@ -467,22 +521,17 @@ function validateSearch(
   }
 }
 
-function validateRecall(input: RecallInput): void {
-  requireText(input.cypher);
-  if (input.cypher.length > CONFIG.recall.maxCypherLength) {
+function validateRecall(input: RecallInput, limit: number): void {
+  requireText(input.repository);
+  requireText(input.taskId);
+  if (
+    !Number.isInteger(limit) ||
+    limit < 1 ||
+    limit > CONFIG.neo4j.maxReadRows
+  ) {
     throw new Error(
-      `cypher must be at most ${CONFIG.recall.maxCypherLength} characters`,
+      `limit must be an integer from 1 to ${CONFIG.neo4j.maxReadRows}`,
     );
-  }
-  if (input.parameters !== undefined && typeof input.parameters !== "object") {
-    throw new Error("parameters must be an object");
-  }
-  for (const key of Object.keys(input.parameters ?? {})) {
-    if (key.startsWith(CONFIG.recall.reservedParameterPrefix)) {
-      throw new Error(
-        `parameter names starting with ${CONFIG.recall.reservedParameterPrefix} are reserved`,
-      );
-    }
   }
 }
 

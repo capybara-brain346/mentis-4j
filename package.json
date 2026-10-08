@@ -12,16 +12,17 @@
     "check": "biome check .",
     "fix": "biome check --write .",
     "test": "npm run build && node --test tests/*.test.js",
-    "start": "node dist/process/server.js",
+    "start": "node dist/mcp/process/server.js",
     "worker:build": "wrangler deploy --dry-run",
     "worker:dev": "wrangler dev",
     "worker:deploy": "wrangler deploy",
     "prepare": "husky"
   },
   "dependencies": {
-    "@cloudflare/workers-oauth-provider": "^1.0.0",
+    "@cloudflare/workers-oauth-provider": "^1.2.3",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "neo4j-driver": "^6.2.0",
+    "openid-client": "^6.8.8",
     "zod": "^4.6.5"
   },
   "devDependencies": {

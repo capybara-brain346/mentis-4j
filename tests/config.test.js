@@ -5,7 +5,6 @@ import {
   parseEnvironment,
   parseStdioEnvironment,
 } from "../dist/config/config.js";
-import { databaseConfigFromEnv } from "../dist/lib/db.js";
 
 test("parses and validates environment configuration centrally", () => {
   const config = parseEnvironment({ NEO4J_PASSWORD: " local-password " });
@@ -13,14 +12,15 @@ test("parses and validates environment configuration centrally", () => {
   assert.equal(config.NEO4J_PASSWORD, "local-password");
   assert.equal(config.LOG_LEVEL, "debug");
   assert.equal(
-    databaseConfigFromEnv({
+    parseStdioEnvironment({
       NEO4J_USERNAME: " cloud-user ",
       NEO4J_PASSWORD: "password",
-    }).username,
+    }).NEO4J_USERNAME,
     "cloud-user",
   );
   assert.equal(
-    databaseConfigFromEnv({ NEO4J_PASSWORD: "password" }).username,
+    parseStdioEnvironment({ NEO4J_PASSWORD: "password" }).NEO4J_USERNAME ??
+      CONFIG.neo4j.username,
     "neo4j",
   );
   assert.equal(CONFIG.neo4j.defaultUri, "bolt://127.0.0.1:7687");

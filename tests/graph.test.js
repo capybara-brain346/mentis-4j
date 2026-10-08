@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test } from "node:test";
-import { Database } from "../dist/lib/db.js";
+import { parseStdioEnvironment } from "../dist/config/config.js";
+import { AuraDB } from "../dist/db/auradb.js";
 import { MemoryGraph } from "../dist/lib/graph.js";
 
 const canRun = Boolean(
@@ -235,7 +236,10 @@ test("marks an attempt outdated without changing its original evidence", async (
     latestCommit: original.outdated.latestCommit,
   });
 
-  assert.match(query, /Repository \{identity: \$repository\}/);
+  assert.match(
+    query,
+    /Repository \{workspaceId: \$workspaceId, identity: \$repository\}/,
+  );
   assert.match(query, /a\.outdatedReason = \$reason/);
   assert.match(
     query,
@@ -270,7 +274,10 @@ test("forgets only an attempt scoped to its repository", async () => {
 
   await graph.forgetAttempt({ repository: "repo", attemptId: "attempt-2" });
 
-  assert.match(query, /Repository \{identity: \$repository\}/);
+  assert.match(
+    query,
+    /Repository \{workspaceId: \$workspaceId, identity: \$repository\}/,
+  );
   assert.match(query, /DETACH DELETE a/);
   assert.deepEqual(parameters, { repository: "repo", attemptId: "attempt-2" });
 });
@@ -308,7 +315,10 @@ test("search limits candidates after scoping to the requested repository", async
     read: (work) =>
       work({
         run: async (query, parameters) => {
-          assert.match(query, /Repository \{identity: \$repository\}/);
+          assert.match(
+            query,
+            /Repository \{workspaceId: \$workspaceId, identity: \$repository\}/,
+          );
           assert.match(query, /vector\.similarity\.cosine/);
           assert.match(query, /LIMIT \$candidateLimit/);
           assert.equal(parameters.repository, attempt.repository);
@@ -573,13 +583,21 @@ test("Jev failures return all vector candidates with null relevance scores", asy
 test("discovers paraphrased attempts, groups task history, and bounds recall", {
   skip: !canRun,
 }, async () => {
-  const database = new Database();
+  const workspaceId = `graph-test-${randomUUID()}`;
+  const env = parseStdioEnvironment();
+  const database = new AuraDB({
+    uri: env.NEO4J_URI ?? "bolt://127.0.0.1:7687",
+    username: env.NEO4J_USERNAME ?? "neo4j",
+    password: env.NEO4J_PASSWORD,
+    database: env.NEO4J_DATABASE ?? "neo4j",
+    workspaceId,
+  });
   const graph = new MemoryGraph(database);
   const repository = `graph-test-${randomUUID()}`;
   const shared = {
     ...attempt,
     repository,
-    taskId: "cookie-session-loop",
+    taskId: `cookie-session-loop-${randomUUID()}`,
     codeContext: "Vite at abc123, local HTTP",
     affectedFiles: ["src/Login.tsx"],
   };
@@ -608,11 +626,17 @@ test("discovers paraphrased attempts, groups task history, and bounds recall", {
     });
 
     const historyBefore = await graph.recall({
-      cypher: `MATCH (t:Task {identity: $taskId, repositoryIdentity: $repository})-[:HAS_ATTEMPT]->(a:Attempt)
-                 RETURN a.id AS id ORDER BY a.recordedAt`,
-      parameters: { taskId: shared.taskId, repository },
+      taskId: shared.taskId,
+      repository,
     });
-    assert.equal(historyBefore.rows.length, 2);
+    assert.equal(historyBefore.attempts.length, 2);
+    const bounded = await graph.recall({
+      repository,
+      taskId: shared.taskId,
+      limit: 1,
+    });
+    assert.equal(bounded.attempts.length, 1);
+    assert.equal(bounded.truncated, true);
 
     const candidates = await graph.search({
       repository,
@@ -658,81 +682,48 @@ test("discovers paraphrased attempts, groups task history, and bounds recall", {
     );
     await graph.forgetAttempt({ repository, attemptId: forgotten.id });
 
-    const history = await graph.recall({
-      cypher: `MATCH (t:Task {identity: $taskId, repositoryIdentity: $repository})-[:HAS_ATTEMPT]->(a:Attempt)
-                 RETURN t.identity AS taskId, a.id AS id, a.action AS action,
-                        a.inference AS inference, a.checkResult AS result,
-                        a.gitCommit AS gitCommit, a.gitDirty AS gitDirty,
-                        a.outdatedReason AS outdatedReason, a.outdatedAt AS outdatedAt,
-                        a.latestCommit AS latestCommit
-                 ORDER BY a.recordedAt`,
-      parameters: { taskId: shared.taskId, repository },
-    });
-    assert.deepEqual(
-      [...history.columns].sort(),
-      [
-        "taskId",
-        "id",
-        "action",
-        "inference",
-        "result",
-        "gitCommit",
-        "gitDirty",
-        "outdatedReason",
-        "outdatedAt",
-        "latestCommit",
-      ].sort(),
-    );
-    assert.equal(history.rows.length, 1);
-    const historyRow = Object.fromEntries(
-      history.columns.map((column, index) => [column, history.rows[0][index]]),
-    );
+    const history = await graph.recall({ repository, taskId: shared.taskId });
+    assert.equal(history.attempts.length, 1);
+    const [historyRow] = history.attempts;
     assert.equal(historyRow.id, original.id);
     assert.equal(
       historyRow.inference,
       "The cookie redirect path causes the login loop",
     );
-    assert.equal(historyRow.result, "failed");
+    assert.equal(historyRow.check.result, "failed");
     assert.equal(historyRow.gitCommit, "a8c3f2");
     assert.equal(historyRow.gitDirty, true);
-    assert.equal(
-      historyRow.outdatedReason,
-      "New evidence confirms the old conclusion is outdated",
-    );
-    assert.equal(historyRow.outdatedAt, updated.outdated.correctedAt);
-    assert.equal(historyRow.latestCommit, "b7d9e1");
-
-    const deleted = await graph.recall({
-      cypher: "MATCH (a:Attempt {id: $attemptId}) RETURN a.id AS id",
-      parameters: { attemptId: forgotten.id },
-    });
-    assert.deepEqual(deleted.rows, []);
+    assert.deepEqual(historyRow.outdated, updated.outdated);
+    assert.ok(history.attempts.every(({ id }) => id !== forgotten.id));
 
     const separateHistory = await graph.recall({
-      cypher: `MATCH (t:Task {identity: $taskId, repositoryIdentity: $repository})-[:HAS_ATTEMPT]->(a:Attempt)
-                 RETURN t.identity AS taskId, count(a) AS attempts`,
-      parameters: { taskId: "separate-cookie-investigation", repository },
+      repository,
+      taskId: "separate-cookie-investigation",
     });
-    assert.deepEqual(
-      [...separateHistory.columns].sort(),
-      ["taskId", "attempts"].sort(),
+    assert.equal(separateHistory.attempts.length, 1);
+    assert.equal(
+      separateHistory.attempts[0].taskId,
+      "separate-cookie-investigation",
     );
-    const separateHistoryRow = Object.fromEntries(
-      separateHistory.columns.map((column, index) => [
-        column,
-        separateHistory.rows[0][index],
-      ]),
-    );
-    assert.equal(separateHistoryRow.taskId, "separate-cookie-investigation");
-    assert.equal(separateHistoryRow.attempts, 1);
-
-    const bounded = await graph.recall({
-      cypher: "UNWIND range(1, 110) AS value RETURN value",
-    });
-    assert.equal(bounded.rows.length, 100);
-    assert.equal(bounded.truncated, true);
-    assert.equal(bounded.truncationReason, "row_limit");
   } finally {
-    await database.close();
+    try {
+      await database.writeTx((tx) =>
+        tx.run("MATCH (n:Attempt {workspaceId: $workspaceId}) DETACH DELETE n"),
+      );
+      await database.writeTx((tx) =>
+        tx.run(
+          "MATCH (n:Task {workspaceId: $workspaceId, repositoryIdentity: $repository}) DETACH DELETE n",
+          { repository },
+        ),
+      );
+      await database.writeTx((tx) =>
+        tx.run(
+          "MATCH (n:Repository {workspaceId: $workspaceId, identity: $repository}) DETACH DELETE n",
+          { repository },
+        ),
+      );
+    } finally {
+      await database.close();
+    }
   }
 });

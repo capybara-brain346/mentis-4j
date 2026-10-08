@@ -30,11 +30,6 @@ export const CONFIG = {
     maxAttemptsPerTask: 5,
     previewLength: 240,
   },
-  recall: {
-    maxCypherLength: 10_000,
-    reservedParameterPrefix: "__mentis",
-    rowLimitParameter: "__mentisRowLimit",
-  },
   logging: {
     defaultLevel: "debug",
     levels: { debug: 0, info: 1, error: 2 },

@@ -2,21 +2,29 @@ import { existsSync } from "node:fs";
 import process from "node:process";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { CONFIG } from "../config/config.js";
-import { Database } from "../lib/db.js";
-import { MemoryGraph } from "../lib/graph.js";
-import { logger } from "../lib/logger.js";
-import { registerTools } from "../lib/tools.js";
+import { CONFIG, parseStdioEnvironment } from "../../config/config.js";
+import { AuraDB } from "../../db/auradb.js";
+import { MemoryGraph } from "../../lib/graph.js";
+import { logger } from "../../lib/logger.js";
+import { registerTools } from "../../lib/tools.js";
 
 async function main(): Promise<void> {
-  let database: Database | undefined;
+  let database: AuraDB | undefined;
 
   try {
     if (existsSync(CONFIG.app.envFile)) {
       process.loadEnvFile(CONFIG.app.envFile);
     }
-    database = new Database();
+    const env = parseStdioEnvironment();
+    database = new AuraDB({
+      uri: env.NEO4J_URI ?? CONFIG.neo4j.defaultUri,
+      username: env.NEO4J_USERNAME ?? CONFIG.neo4j.username,
+      password: env.NEO4J_PASSWORD,
+      database: env.NEO4J_DATABASE ?? CONFIG.neo4j.defaultDatabase,
+      workspaceId: "local",
+    });
     await database.verifyConnectivity();
+    await database.ensureConstraints();
     logger.info("Mentis connected to Neo4j");
 
     const server = new McpServer({

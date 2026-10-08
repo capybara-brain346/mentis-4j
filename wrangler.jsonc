@@ -1,7 +1,36 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "mentis-4j",
-  "main": "src/server/worker.ts",
+  "account_id": "32f2a5e2a676ee905a3828b2b38b0150",
+  "workers_dev": true,
+  "preview_urls": false,
+  "main": "src/mcp/server/server.ts",
   "compatibility_date": "2025-03-01",
-  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"]
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "vars": {
+    "GOOGLE_CLIENT_ID": "695398101716-32mf826vrldhd3t2n957p0ksighidi7d.apps.googleusercontent.com",
+    "PUBLIC_BASE_URL": "https://mentis-4j.choudhari-piyush.workers.dev",
+    "BROWSER_SESSION_TTL_SECONDS": "604800",
+    "NEO4J_URI": "neo4j+s://84372ed8.databases.neo4j.io",
+    "NEO4J_USERNAME": "84372ed8",
+    "NEO4J_DATABASE": "84372ed8",
+    "LOG_LEVEL": "info"
+  },
+  "observability": {
+    "enabled": true,
+    "redact_query_string": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.01 }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "mentis-auth",
+      "database_id": "145233ff-cd70-42a6-a2d3-e0e87e3a1c1a",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "kv_namespaces": [
+    { "binding": "OAUTH_KV", "id": "61436524761a42098f0fb6ebffe3f3a8" }
+  ]
 }

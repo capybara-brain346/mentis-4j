@@ -1,7 +1,7 @@
 export interface D1PreparedStatement {
   bind(...values: unknown[]): D1PreparedStatement;
   all<T = Record<string, unknown>>(): Promise<D1Result<T>>;
-  run(): Promise<D1Result<never>>;
+  run<T = Record<string, unknown>>(): Promise<D1Result<T>>;
 }
 
 export interface D1Result<T> {
@@ -146,25 +146,6 @@ export interface OAuthConsentRecord {
   createdAt: string;
 }
 
-export type AuthTransactionType = "google_sign_in" | "mcp_authorization";
-
-export interface AuthTransactionInput {
-  type: AuthTransactionType;
-  state: string;
-  nonce: string;
-  validatedRequest: Record<string, unknown>;
-  expiresAt: string;
-}
-
-export interface AuthTransaction {
-  id: string;
-  type: AuthTransactionType;
-  nonce: string;
-  validatedRequest: Record<string, unknown>;
-  expiresAt: string;
-  consumedAt: string;
-}
-
 interface AccountRow {
   userId: string;
   googleSub: string;
@@ -191,15 +172,6 @@ interface SessionRow {
   email: string;
   expiresAt: string;
   createdAt: string;
-}
-
-interface AuthTransactionRow {
-  id: string;
-  type: AuthTransactionType;
-  nonce: string;
-  validatedRequest: string;
-  expiresAt: string;
-  consumedAt: string;
 }
 
 export class D1Store {
@@ -614,73 +586,6 @@ export class D1Store {
     assertSuccess(result);
     return result.meta?.changes ?? 0;
   }
-
-  async createAuthTransaction(input: AuthTransactionInput): Promise<string> {
-    if (input.type !== "google_sign_in" && input.type !== "mcp_authorization") {
-      throw new Error("Unsupported auth transaction type");
-    }
-    requireText(input.state, "state");
-    requireText(input.nonce, "nonce");
-    const now = new Date().toISOString();
-    const expiresAt = futureTimestamp(input.expiresAt, now, "expiresAt");
-    if (!isJsonObject(input.validatedRequest)) {
-      throw new Error("validatedRequest must be a JSON object");
-    }
-    const validatedRequest = JSON.stringify(input.validatedRequest);
-    if (!validatedRequest || !isJsonObject(JSON.parse(validatedRequest))) {
-      throw new Error("validatedRequest must be a JSON object");
-    }
-    const id = crypto.randomUUID();
-    const stateHash = await hashSecret(input.state);
-    const result = await this.database
-      .prepare(
-        `
-        INSERT INTO auth_transactions
-          (id, transaction_type, state_hash, nonce, validated_request,
-           expires_at, consumed_at)
-        VALUES (?, ?, ?, ?, ?, ?, NULL)
-      `,
-      )
-      .bind(id, input.type, stateHash, input.nonce, validatedRequest, expiresAt)
-      .run();
-    assertSuccess(result);
-    return id;
-  }
-
-  async consumeAuthTransaction(
-    type: AuthTransactionType,
-    state: string,
-    at = new Date().toISOString(),
-  ): Promise<AuthTransaction | null> {
-    requireText(type, "type");
-    requireText(state, "state");
-    const consumedAt = normalizeTimestamp(at, "at");
-    const stateHash = await hashSecret(state);
-    const row = await first<AuthTransactionRow>(
-      this.database
-        .prepare(
-          `
-          UPDATE auth_transactions
-          SET consumed_at = ?
-          WHERE transaction_type = ?
-            AND state_hash = ?
-            AND consumed_at IS NULL
-            AND expires_at > ?
-          RETURNING
-            id,
-            transaction_type AS type,
-            nonce,
-            validated_request AS validatedRequest,
-            expires_at AS expiresAt,
-            consumed_at AS consumedAt
-        `,
-        )
-        .bind(consumedAt, type, stateHash, consumedAt),
-    );
-    if (!row) return null;
-    const validatedRequest = parseJsonObject(row.validatedRequest);
-    return { ...row, validatedRequest };
-  }
 }
 
 async function first<T>(statement: D1PreparedStatement): Promise<T | null> {
@@ -731,14 +636,4 @@ function randomSecret(): string {
   return Array.from(crypto.getRandomValues(new Uint8Array(32)), (byte) =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
-}
-
-function isJsonObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function parseJsonObject(value: string): Record<string, unknown> {
-  const parsed: unknown = JSON.parse(value);
-  if (!isJsonObject(parsed)) throw new Error("Stored auth request is invalid");
-  return parsed;
 }
