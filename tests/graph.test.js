@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import { CONFIG } from "../dist/config/config.js";
-import { parseStdioEnvironment } from "../dist/config/environment.js";
+import { parseEnvironment } from "../dist/config/environment.js";
 import { AuraDB } from "../dist/db/auradb.js";
 import { MemoryGraph } from "../dist/lib/graph.js";
 
@@ -585,7 +585,7 @@ test("discovers paraphrased attempts, groups task history, and bounds recall", {
   skip: !canRun,
 }, async () => {
   const workspaceId = `graph-test-${randomUUID()}`;
-  const env = parseStdioEnvironment();
+  const env = parseEnvironment();
   const database = new AuraDB({
     uri: env.NEO4J_URI ?? CONFIG.neo4j.defaultUri,
     username: env.NEO4J_USERNAME ?? CONFIG.neo4j.username,

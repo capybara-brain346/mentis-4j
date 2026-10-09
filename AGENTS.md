@@ -2,8 +2,8 @@
 
 ## Repository Map
 
-- `src/` — TypeScript stdio MCP server, tool contracts, Neo4j access, and graph operations.
-- `tests/` — Node.js test-runner integration tests for graph operations and stdio MCP tools.
+- `src/` — TypeScript Worker MCP server, tool contracts, Neo4j access, and graph operations.
+- `tests/` — Node.js test-runner integration tests for graph operations and Worker OAuth/MCP behavior.
 - `docs/planning/` — product, memory, graph, MCP-boundary, and implementation planning documents.
 - `README.md` — setup, supported MCP tools, graph behavior, security boundary, and checks.
 - `compose.yaml` — local Neo4j service and persistent data volume.
@@ -50,9 +50,9 @@ Run from the repository root:
 - `npm run check` — check lint rules, formatting, and import order for the server and landing app.
 - `npm run fix` — apply Biome formatting, import order, and safe lint fixes.
 - `npm run format:write` — apply Biome formatting only.
-- `npm test` — build, then run `tests/*.test.js`; graph and MCP integration tests skip unless `NEO4J_PASSWORD` is exported in the shell and a Neo4j server is reachable. Compose’s `.env` loading does not automatically set variables for `npm`.
+- `npm test` — build, then run `tests/*.test.js`; graph integration tests skip unless `NEO4J_PASSWORD` and `OPENROUTER_API_KEY` are exported in the shell and Neo4j is reachable. Compose’s `.env` loading does not automatically set variables for `npm`.
 - `docker compose up -d` — start local Neo4j; set `NEO4J_PASSWORD` in the shell or `.env` first. The service binds its ports to localhost and persists data in the `neo4j_data` volume.
-- `npm start` — start the compiled MCP server; requires a reachable Neo4j database and `NEO4J_PASSWORD` (see `README.md` for optional connection settings).
+- `npm run worker:dev` — start the local Cloudflare Worker; requires the configured database and OAuth bindings.
 
 There is no migration or code-generation command at present. Report checks accurately: skipped integration tests are not database-backed verification, and a command that exits unsuccessfully must not be described as passing.
 

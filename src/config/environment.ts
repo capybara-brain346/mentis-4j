@@ -33,10 +33,6 @@ export const environmentSchema = z.object({
   LOG_LEVEL: logLevelSchema.default(CONFIG.logging.defaultLevel),
 });
 
-export const stdioEnvironmentSchema = environmentSchema.extend({
-  NEO4J_PASSWORD: neo4jPasswordSchema,
-});
-
 export type Environment = Partial<
   Record<keyof typeof environmentSchema.shape, string>
 >;
@@ -46,12 +42,6 @@ export function parseEnvironment(
   env: unknown = process.env,
 ): RuntimeEnvironment {
   return environmentSchema.parse(env);
-}
-
-export function parseStdioEnvironment(
-  env: unknown = process.env,
-): z.output<typeof stdioEnvironmentSchema> {
-  return stdioEnvironmentSchema.parse(env);
 }
 
 export function getLogLevel(): keyof typeof CONFIG.logging.levels {

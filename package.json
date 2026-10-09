@@ -12,8 +12,6 @@
     "check": "biome check .",
     "fix": "biome check --write .",
     "test": "npm run build && node --test tests/*.test.js",
-    "start": "node dist/mcp/process/server.js",
-    "start:dev": "npm run build && node --env-file=.env.development dist/mcp/process/server.js",
     "dev": "npm run worker:dev",
     "frontend:dev": "npm --prefix frontend run dev:cloudflare",
     "db:dev": "docker compose --project-name mentis-dev --env-file .env.development up -d",
