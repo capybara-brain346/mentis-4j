@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import neo4j from "neo4j-driver";
+import { CONFIG } from "../dist/config/config.js";
 import { MemoryGraph } from "../dist/lib/graph.js";
 
 function fakeDatabase(values) {
@@ -37,32 +38,36 @@ function fakeDatabase(values) {
 }
 
 test("bounds structured recall rows and serialized output size", async () => {
-  const byRows = fakeDatabase(Array.from({ length: 101 }, () => "action"));
+  const maxRows = CONFIG.neo4j.maxReadRows;
+  const byRows = fakeDatabase(
+    Array.from({ length: maxRows + 1 }, () => "action"),
+  );
   const rows = await new MemoryGraph(byRows.database).recall({
     repository: "repo",
     taskId: "task-1",
   });
   assert.ok(neo4j.isInt(byRows.parameters().rowLimit));
-  assert.equal(byRows.parameters().rowLimit.toNumber(), 101);
+  assert.equal(byRows.parameters().rowLimit.toNumber(), maxRows + 1);
   assert.match(byRows.statement(), /workspaceId: \$workspaceId/);
   assert.match(byRows.statement(), /LIMIT \$rowLimit/);
-  assert.equal(rows.attempts.length, 100);
+  assert.equal(rows.attempts.length, maxRows);
   assert.equal(rows.truncated, true);
 
-  const byBytes = fakeDatabase(["x".repeat(512_000)]);
+  const maxBytes = CONFIG.neo4j.maxReadResponseBytes;
+  const byBytes = fakeDatabase(["x".repeat(maxBytes)]);
   const large = await new MemoryGraph(byBytes.database).recall({
     repository: "repo",
     taskId: "task-1",
   });
   assert.deepEqual(large.attempts, []);
   assert.equal(large.truncated, true);
-  assert.ok(Buffer.byteLength(JSON.stringify(large)) <= 512_000);
+  assert.ok(Buffer.byteLength(JSON.stringify(large)) <= maxBytes);
 
   const input = { repository: "repo", taskId: "task-1" };
   const emptyAction = await new MemoryGraph(fakeDatabase([""]).database).recall(
     input,
   );
-  const available = 512_000 - Buffer.byteLength(JSON.stringify(emptyAction));
+  const available = maxBytes - Buffer.byteLength(JSON.stringify(emptyAction));
   for (const extra of [0, 1]) {
     const boundary = await new MemoryGraph(
       fakeDatabase(["x".repeat(available + extra)]).database,
@@ -80,7 +85,11 @@ test("recall validates repository, task, and limit before reading", async () => 
   for (const input of [
     { cypher: "MATCH (n) RETURN n" },
     { repository: "repo" },
-    { repository: "repo", taskId: "task", limit: 101 },
+    {
+      repository: "repo",
+      taskId: "task",
+      limit: CONFIG.neo4j.maxReadRows + 1,
+    },
     { repository: "repo", taskId: "task", limit: 0 },
   ]) {
     await assert.rejects(graph.recall(input));

@@ -1,5 +1,51 @@
-import process from "node:process";
-import { z } from "zod";
+const defaultBackendBaseUrl = "https://mcp.men-tis.xyz";
+
+export const PUBLIC_CONFIG = {
+  worker: {
+    publicBaseUrl: defaultBackendBaseUrl,
+    mcpPath: "/mcp",
+  },
+  frontend: {
+    clientIcons: {
+      claude: "claude.svg",
+      "claude code": "claude.svg",
+      codex: "codex.svg",
+      amp: "amp.svg",
+      opencode: "opencode.svg",
+      openclaw: "openclaw-color.svg",
+      "hermes agent": "hermes-agent.svg",
+      "pi agent": "pi-agent.svg",
+      openai: "openai.svg",
+    },
+    demoIntervalMs: 6_000,
+    design: {
+      colors: {
+        background: "#f7f7f3",
+        foreground: "#242721",
+        surface: "#fcfcf9",
+        secondary: "#eaece5",
+        muted: "#60655c",
+        border: "#daddd3",
+        green: "#2c6247",
+        "green-soft": "#e8f0e6",
+        red: "#963f34",
+        "red-soft": "#f8e9e2",
+        amber: "#815c21",
+      },
+      bodyPx: 16,
+      evidencePx: 14,
+      controlPx: 44,
+      iconPx: 28,
+      narrowPx: 800,
+      compactPx: 440,
+      comparisonPx: 640,
+      socialWidth: 1200,
+      socialHeight: 630,
+    },
+    backendBaseUrl:
+      process.env.NEXT_PUBLIC_MENTIS_BACKEND_URL ?? defaultBackendBaseUrl,
+  },
+} as const;
 
 export const CONFIG = {
   app: { name: "mentis-4j", version: "0.1.0", envFile: ".env" },
@@ -34,73 +80,20 @@ export const CONFIG = {
     defaultLevel: "debug",
     levels: { debug: 0, info: 1, error: 2 },
   },
-  worker: {
-    publicBaseUrl: "https://mcp.men-tis.xyz",
-    mcpPath: "/mcp",
+  google: {
+    issuer: "https://accounts.google.com",
   },
+  oauth: {
+    accessTokenTtlSeconds: 10 * 60,
+    refreshTokenTtlSeconds: 7 * 24 * 60 * 60,
+    pendingTransactionTtlSeconds: 10 * 60,
+    consentVersion: "1",
+    grantPageLimit: 1_000,
+  },
+  frontend: {
+    defaultBaseUrl: "http://127.0.0.1:6969",
+    authProxyRequestTimeoutMs: 15_000,
+    authProxyMaxBodyBytes: 4_096,
+  },
+  worker: PUBLIC_CONFIG.worker,
 } as const;
-
-const logLevelSchema = z.enum(["debug", "info", "error"]);
-const neo4jPasswordSchema = z
-  .string({ error: "NEO4J_PASSWORD is required" })
-  .trim()
-  .min(1, "NEO4J_PASSWORD is required");
-
-export const environmentSchema = z.object({
-  NEO4J_URI: z.string().trim().min(1, "NEO4J_URI must not be empty").optional(),
-  NEO4J_USERNAME: z
-    .string()
-    .trim()
-    .min(1, "NEO4J_USERNAME must not be empty")
-    .optional(),
-  NEO4J_PASSWORD: neo4jPasswordSchema.optional(),
-  NEO4J_DATABASE: z
-    .string()
-    .trim()
-    .min(1, "NEO4J_DATABASE must not be empty")
-    .optional(),
-  OPENROUTER_API_KEY: z
-    .string()
-    .trim()
-    .min(1, "OPENROUTER_API_KEY is required")
-    .optional(),
-  LOG_LEVEL: logLevelSchema.default(CONFIG.logging.defaultLevel),
-});
-
-export const stdioEnvironmentSchema = environmentSchema.extend({
-  NEO4J_PASSWORD: neo4jPasswordSchema,
-});
-
-export type Environment = Partial<
-  Record<keyof typeof environmentSchema.shape, string>
->;
-export type RuntimeEnvironment = z.output<typeof environmentSchema>;
-
-export function parseEnvironment(
-  env: unknown = process.env,
-): RuntimeEnvironment {
-  return environmentSchema.parse(env);
-}
-
-export function parseStdioEnvironment(
-  env: unknown = process.env,
-): z.output<typeof stdioEnvironmentSchema> {
-  return stdioEnvironmentSchema.parse(env);
-}
-
-export function getLogLevel(): keyof typeof CONFIG.logging.levels {
-  return logLevelSchema
-    .catch(CONFIG.logging.defaultLevel)
-    .parse(process.env.LOG_LEVEL);
-}
-
-export function getOpenRouterApiKey(configuredApiKey?: string): string {
-  const apiKey =
-    configuredApiKey === undefined
-      ? environmentSchema.shape.OPENROUTER_API_KEY.parse(
-          process.env.OPENROUTER_API_KEY,
-        )
-      : environmentSchema.shape.OPENROUTER_API_KEY.parse(configuredApiKey);
-  if (!apiKey) throw new Error("OPENROUTER_API_KEY is required");
-  return apiKey;
-}

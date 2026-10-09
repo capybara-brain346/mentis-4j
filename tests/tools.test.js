@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { test } from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { CONFIG } from "../dist/config/config.js";
 import { AuraDB } from "../dist/db/auradb.js";
 import { registerTools } from "../dist/lib/tools.js";
 
@@ -125,9 +126,10 @@ test("stdio tools search tasks, record attempts, and read structured history", {
     args: ["dist/mcp/process/server.js"],
     env: {
       NEO4J_PASSWORD: process.env.NEO4J_PASSWORD,
-      NEO4J_URI: process.env.NEO4J_URI ?? "bolt://127.0.0.1:7687",
-      NEO4J_DATABASE: process.env.NEO4J_DATABASE ?? "neo4j",
-      NEO4J_USERNAME: process.env.NEO4J_USERNAME ?? "neo4j",
+      NEO4J_URI: process.env.NEO4J_URI ?? CONFIG.neo4j.defaultUri,
+      NEO4J_DATABASE:
+        process.env.NEO4J_DATABASE ?? CONFIG.neo4j.defaultDatabase,
+      NEO4J_USERNAME: process.env.NEO4J_USERNAME ?? CONFIG.neo4j.username,
       OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
     },
   });
@@ -205,7 +207,7 @@ test("stdio tools search tasks, record attempts, and read structured history", {
       arguments: {
         repository,
         query: "users keep landing back on the login screen after signing in",
-        limit: 20,
+        limit: CONFIG.search.maxLimit,
       },
     });
     assert.notEqual(searched.isError, true);
@@ -288,16 +290,20 @@ test("stdio tools search tasks, record attempts, and read structured history", {
 
     const invalidLimit = await client.callTool({
       name: "search",
-      arguments: { repository, query: "login issue", limit: 1000 },
+      arguments: {
+        repository,
+        query: "login issue",
+        limit: CONFIG.search.maxLimit + 1,
+      },
     });
     assert.equal(invalidLimit.isError, true);
   } finally {
     await client.close();
     const database = new AuraDB({
-      uri: process.env.NEO4J_URI ?? "bolt://127.0.0.1:7687",
-      username: process.env.NEO4J_USERNAME ?? "neo4j",
+      uri: process.env.NEO4J_URI ?? CONFIG.neo4j.defaultUri,
+      username: process.env.NEO4J_USERNAME ?? CONFIG.neo4j.username,
       password: process.env.NEO4J_PASSWORD,
-      database: process.env.NEO4J_DATABASE ?? "neo4j",
+      database: process.env.NEO4J_DATABASE ?? CONFIG.neo4j.defaultDatabase,
       workspaceId: "local",
     });
     try {

@@ -10,6 +10,8 @@ import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import AxeBuilder from "@axe-core/playwright";
 import { chromium } from "playwright";
+import { CONFIG } from "../../src/config/config.ts";
+import { assertLayout, widths } from "./layout.mjs";
 
 // The Worker/OIDC protocol is tested in tests/worker.test.js. This fixture checks the Next server and browser together.
 const sessions = new Map();
@@ -18,6 +20,9 @@ let frontend;
 let failDisconnect = false;
 let failAccount = false;
 let mutations = 0;
+let fixtureConnections;
+let disconnectWait;
+let longAccount = false;
 const failures = [];
 const backend = createServer(async (request, response) => {
   try {
@@ -40,7 +45,7 @@ const backend = createServer(async (request, response) => {
       states.add(state);
       response.writeHead(302, {
         Location: `${frontend}/api/auth/callback?state=${state}&code=fixture`,
-        "Set-Cookie": `__Host-mentis-sign-in=${state}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=600`,
+        "Set-Cookie": `__Host-mentis-sign-in=${state}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${CONFIG.oauth.pendingTransactionTtlSeconds}`,
       });
       return response.end();
     }
@@ -64,10 +69,16 @@ const backend = createServer(async (request, response) => {
     if (url.pathname === "/api/account") {
       if (failAccount) return send(503, { error: "Fixture outage" });
       return send(200, {
-        name: "Live User",
-        email: "live@example.com",
+        name: longAccount
+          ? "A developer with a very long registered account name"
+          : "Live User",
+        email: longAccount
+          ? `${"long-address-".repeat(8)}@example.com`
+          : "live@example.com",
         workspace: "Private workspace",
-        workspaceId: "ws_live",
+        workspaceId: longAccount
+          ? `ws_${"long-workspace-id-".repeat(12)}`
+          : "ws_live",
         expiresAt: new Date(Date.now() + 3600_000).toISOString(),
       });
     }
@@ -75,16 +86,18 @@ const backend = createServer(async (request, response) => {
       return send(
         200,
         session.connected
-          ? [
+          ? (fixtureConnections ?? [
               {
                 id: "consent_live",
-                name: "Live Agent",
+                name: "Claude Code",
                 description: "Registered client. Name is not verified.",
                 status: "active",
                 connected: new Date().toISOString(),
-                expires: new Date(Date.now() + 604800_000).toISOString(),
+                expires: new Date(
+                  Date.now() + CONFIG.oauth.refreshTokenTtlSeconds * 1000,
+                ).toISOString(),
               },
-            ]
+            ])
           : [],
       );
     assert.equal(request.method, "POST");
@@ -97,6 +110,7 @@ const backend = createServer(async (request, response) => {
       let body = "";
       for await (const chunk of request) body += chunk;
       assert.equal(new URLSearchParams(body).get("consentId"), "consent_live");
+      if (disconnectWait) await disconnectWait;
       if (failDisconnect) return send(503, { error: "Fixture outage" });
       session.connected = false;
       return send(204);
@@ -242,17 +256,41 @@ try {
     console.log(`${name}: sign-in and account reload passed`);
     await navigate("Connected clients");
     await page
-      .getByRole("heading", { name: "Live Agent", exact: true })
+      .getByRole("heading", { name: "Claude Code", exact: true })
       .waitFor();
+    await page.locator('.client-mark img[src$="/icons/claude.svg"]').waitFor();
+    assert.equal(
+      await page
+        .locator(".client-mark img")
+        .evaluate((image) => image.complete && image.naturalWidth > 0),
+      true,
+    );
+    await assertLayout(page, `${name} live connections`);
     await audit("connections");
     failDisconnect = true;
+    let releaseDisconnect;
+    disconnectWait = new Promise((resolve) => {
+      releaseDisconnect = resolve;
+    });
     await page.getByRole("button", { name: "Disconnect", exact: true }).click();
+    await assertLayout(page, `${name} disconnect dialog`);
     const failedRequest = page.waitForResponse((response) =>
       response.url().endsWith("/api/auth/disconnect"),
     );
     await page
       .getByRole("button", { name: "Disconnect client", exact: true })
       .click();
+    await page
+      .getByRole("button", { name: "Disconnecting…", exact: true })
+      .waitFor();
+    assert.equal(
+      await page
+        .getByRole("button", { name: "Disconnecting…", exact: true })
+        .isDisabled(),
+      true,
+    );
+    releaseDisconnect();
+    disconnectWait = undefined;
     const failedResponse = await failedRequest;
     assert.equal(failedResponse.status(), 503);
     await page.getByRole("dialog").getByRole("alert").waitFor();
@@ -348,6 +386,59 @@ try {
     "Live sign-in must clear the saved preview",
   );
   assert.equal(mutations, beforePreview);
+  longAccount = true;
+  await page.goto(`${frontend}/account`);
+  await page
+    .getByRole("heading", { name: "Your account", exact: true })
+    .waitFor();
+  const longClients = Array.from({ length: 12 }, (_, index) => ({
+    id: `consent_long_${index}`,
+    name:
+      index === 0
+        ? "Claude Code"
+        : `Registered agent ${index} ${"long-name-".repeat(15)}`,
+    description: "Registered client. Name is not verified.",
+    status: index === 1 ? "expired" : "active",
+    connected: new Date().toISOString(),
+    expires: new Date(Date.now() + 3600_000).toISOString(),
+  }));
+  for (const count of [0, 1, 12]) {
+    fixtureConnections = longClients.slice(0, count);
+    for (const width of count === 12 ? [...widths, 720] : [320, 1440]) {
+      await page.setViewportSize({ width, height: 740 });
+      await page.goto(`${frontend}/connections`);
+      await page
+        .getByRole("heading", { name: "Connected clients", exact: true })
+        .waitFor();
+      assert.equal(await page.locator(".connection-row").count(), count);
+      await assertLayout(
+        page,
+        `${width}px ${count} live clients with long names`,
+      );
+      if (count) {
+        await page
+          .locator(".connection-details")
+          .last()
+          .locator("summary")
+          .click();
+        await assertLayout(page, `${width}px long access details`);
+      }
+      if (count === 12) {
+        await page
+          .getByRole("searchbox", { name: "Search clients" })
+          .fill("no such client");
+        await page
+          .getByRole("heading", { name: "No matching clients", exact: true })
+          .waitFor();
+        await assertLayout(page, `${width}px empty filter`);
+        await page.goto(`${frontend}/account`);
+        await page
+          .getByRole("heading", { name: "Your account", exact: true })
+          .waitFor();
+        await assertLayout(page, `${width}px long email and workspace ID`);
+      }
+    }
+  }
   assert.deepEqual(failures, []);
   console.log(
     `Account browser checks passed (desktop and mobile). Screenshots: ${screenshots}`,

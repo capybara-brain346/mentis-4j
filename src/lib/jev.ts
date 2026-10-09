@@ -1,4 +1,5 @@
-import { CONFIG, getOpenRouterApiKey } from "../config/config.js";
+import { CONFIG } from "../config/config.js";
+import { getOpenRouterApiKey } from "../config/environment.js";
 import type { AttemptRecord } from "./graph.js";
 import { logger } from "./logger.js";
 

@@ -69,7 +69,9 @@ web_modules/
 .env
 .env.*
 !.env.example
+!.env.*.example
 .dev.vars
+.dev.vars.*
 .wrangler/
 
 # parcel-bundler cache (https://parceljs.org/)
@@ -152,3 +154,7 @@ docs/experiments/
 # Impeccable
 .impeccable/
 
+
+# Generated frontend assets
+frontend/public/icons/
+frontend/app/design.generated.css

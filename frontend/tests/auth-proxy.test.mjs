@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { CONFIG } from "../../src/config/config.ts";
 import { backendOrigin, proxyAuthRequest } from "../lib/auth-proxy.ts";
 
 function configure(t) {
@@ -50,7 +51,7 @@ test("proxy rejects unknown routes, wrong methods, foreign origins, and large bo
         request("disconnect", {
           method: "POST",
           headers: { Origin: "https://frontend.example" },
-          body: "x".repeat(4097),
+          body: "x".repeat(CONFIG.frontend.authProxyMaxBodyBytes + 1),
         }),
         "disconnect",
       )

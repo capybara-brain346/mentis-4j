@@ -30,3 +30,33 @@ test("server loads .env before configuring Neo4j", () => {
     rmSync(cwd, { recursive: true, force: true });
   }
 });
+
+test("an explicit development env file takes priority over .env", () => {
+  const cwd = mkdtempSync(join(tmpdir(), "mentis-dev-env-"));
+  try {
+    writeFileSync(
+      join(cwd, ".env"),
+      "NEO4J_PASSWORD=production-password\nNEO4J_URI=production://host\n",
+    );
+    writeFileSync(
+      join(cwd, ".env.development"),
+      "NEO4J_PASSWORD=local-password\nNEO4J_URI=development://host\n",
+    );
+    const { stderr, status } = spawnSync(
+      process.execPath,
+      ["--env-file=.env.development", server],
+      {
+        cwd,
+        env: { PATH: process.env.PATH },
+        encoding: "utf8",
+        timeout: 5000,
+      },
+    );
+
+    assert.equal(status, 1);
+    assert.match(stderr, /Unknown scheme: development/);
+    assert.doesNotMatch(stderr, /Unknown scheme: production/);
+  } finally {
+    rmSync(cwd, { recursive: true, force: true });
+  }
+});

@@ -8,6 +8,7 @@ import { test } from "node:test";
 import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 import { convertV4MiniflareOptions, Miniflare } from "miniflare";
+import { CONFIG } from "../dist/config/config.js";
 import { D1Store, initializeD1Schema } from "../dist/db/d1.js";
 import {
   googleClientId,
@@ -507,9 +508,13 @@ test("Worker uses consent-first upstream sign-in and real MCP tokens", {
       )
       .first();
     const deadline = Date.parse(consent.expires_at);
-    assert.ok(deadline >= exchangeStarted + 604800_000);
-    assert.ok(deadline <= Date.now() + 604800_000);
-    assert.equal(exchanged.data.expires_in, 600);
+    assert.ok(
+      deadline >= exchangeStarted + CONFIG.oauth.refreshTokenTtlSeconds * 1000,
+    );
+    assert.ok(
+      deadline <= Date.now() + CONFIG.oauth.refreshTokenTtlSeconds * 1000,
+    );
+    assert.equal(exchanged.data.expires_in, CONFIG.oauth.accessTokenTtlSeconds);
     assert.ok(exchanged.data.refresh_token);
     assert.equal(exchanged.data.scope, "test:a test:b");
     const allowed = await access(exchanged.data.access_token);
@@ -520,7 +525,7 @@ test("Worker uses consent-first upstream sign-in and real MCP tokens", {
       refresh_token: exchanged.data.refresh_token,
     });
     assert.equal(refreshed.response.status, 200);
-    assert.equal(refreshed.data.expires_in, 600);
+    assert.equal(refreshed.data.expires_in, CONFIG.oauth.accessTokenTtlSeconds);
     assert.notEqual(refreshed.data.refresh_token, exchanged.data.refresh_token);
     assert.equal(
       await db

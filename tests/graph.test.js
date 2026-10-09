@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { test } from "node:test";
-import { parseStdioEnvironment } from "../dist/config/config.js";
+import { CONFIG } from "../dist/config/config.js";
+import { parseStdioEnvironment } from "../dist/config/environment.js";
 import { AuraDB } from "../dist/db/auradb.js";
 import { MemoryGraph } from "../dist/lib/graph.js";
 
 const canRun = Boolean(
   process.env.NEO4J_PASSWORD && process.env.OPENROUTER_API_KEY,
 );
-const embedding = () => Array(1024).fill(0.25);
+const embedding = () => Array(CONFIG.embedding.dimensions).fill(0.25);
 const attempt = {
   repository: "https://example.test/repo.git",
   taskId: "cookie-session-loop",
@@ -45,7 +46,7 @@ function searchRecord(candidate) {
     latestCommit: candidate.outdated?.latestCommit ?? null,
     matchedAttemptPreview:
       candidate.matchedAttemptPreview ??
-      `${action} — ${observation}`.slice(0, 240),
+      `${action} — ${observation}`.slice(0, CONFIG.search.previewLength),
     similarity: candidate.similarity,
   };
   return { get: (key) => values[key] };
@@ -136,7 +137,7 @@ test("embeds the typed attempt as a document before writing it", async () => {
   );
 
   const recorded = await graph.recordAttempt(attempt, "request-1");
-  assert.equal(written.embedding.length, 1024);
+  assert.equal(written.embedding.length, CONFIG.embedding.dimensions);
   assert.equal(written.gitCommit, attempt.gitCommit);
   assert.equal(written.gitDirty, true);
   assert.equal(recorded.id, "attempt-id");
@@ -586,10 +587,10 @@ test("discovers paraphrased attempts, groups task history, and bounds recall", {
   const workspaceId = `graph-test-${randomUUID()}`;
   const env = parseStdioEnvironment();
   const database = new AuraDB({
-    uri: env.NEO4J_URI ?? "bolt://127.0.0.1:7687",
-    username: env.NEO4J_USERNAME ?? "neo4j",
+    uri: env.NEO4J_URI ?? CONFIG.neo4j.defaultUri,
+    username: env.NEO4J_USERNAME ?? CONFIG.neo4j.username,
     password: env.NEO4J_PASSWORD,
-    database: env.NEO4J_DATABASE ?? "neo4j",
+    database: env.NEO4J_DATABASE ?? CONFIG.neo4j.defaultDatabase,
     workspaceId,
   });
   const graph = new MemoryGraph(database);

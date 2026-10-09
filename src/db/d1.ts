@@ -1,3 +1,5 @@
+import { CONFIG } from "../config/config.js";
+
 export interface D1PreparedStatement {
   bind(...values: unknown[]): D1PreparedStatement;
   all<T = Record<string, unknown>>(): Promise<D1Result<T>>;
@@ -298,7 +300,9 @@ export class D1Store {
           await hashSecret(input.state),
           input.nonce,
           input.verifier,
-          new Date(Date.now() + 600_000).toISOString(),
+          new Date(
+            Date.now() + CONFIG.oauth.pendingTransactionTtlSeconds * 1000,
+          ).toISOString(),
         ),
     ]);
     for (const result of results) assertSuccess(result);

@@ -1,4 +1,5 @@
-import { CONFIG, getLogLevel } from "../config/config.js";
+import { CONFIG } from "../config/config.js";
+import { getLogLevel } from "../config/environment.js";
 
 type Level = keyof typeof CONFIG.logging.levels;
 

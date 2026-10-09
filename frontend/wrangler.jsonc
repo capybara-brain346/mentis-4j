@@ -15,6 +15,15 @@
     "MENTIS_BACKEND_URL": "https://mcp.men-tis.xyz",
     "FRONTEND_BASE_URL": "https://men-tis.xyz"
   },
+  "env": {
+    "development": {
+      "routes": [],
+      "vars": {
+        "MENTIS_BACKEND_URL": "http://localhost:8787",
+        "FRONTEND_BASE_URL": "http://localhost:6969"
+      }
+    }
+  },
   "observability": {
     "enabled": true,
     "redact_query_string": true,

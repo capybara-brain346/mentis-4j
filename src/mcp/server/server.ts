@@ -18,7 +18,8 @@ import {
   requestUsesCanonicalOrigin,
   type WorkerEnvironment,
 } from "../../auth/oauth.js";
-import { CONFIG, environmentSchema } from "../../config/config.js";
+import { CONFIG } from "../../config/config.js";
+import { environmentSchema } from "../../config/environment.js";
 import { AuraDB } from "../../db/auradb.js";
 import { embedText } from "../../lib/embeddings.js";
 import { MemoryGraph } from "../../lib/graph.js";

@@ -1,3 +1,5 @@
+import { CONFIG } from "../../src/config/config.ts";
+
 const routes: Record<string, { method: string; path: string }> = {
   "sign-in": { method: "GET", path: "/api/sign-in" },
   callback: { method: "GET", path: "/api/google/callback" },
@@ -67,7 +69,7 @@ export async function proxyAuthRequest(
           const { done, value } = await reader.read();
           if (done) break;
           size += value.byteLength;
-          if (size > 4096) {
+          if (size > CONFIG.frontend.authProxyMaxBodyBytes) {
             await reader.cancel();
             return new Response("Request too large", { status: 413 });
           }
@@ -86,7 +88,7 @@ export async function proxyAuthRequest(
       body,
       redirect: "manual",
       cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(CONFIG.frontend.authProxyRequestTimeoutMs),
     });
     const responseHeaders = new Headers({
       "Cache-Control": "no-store",

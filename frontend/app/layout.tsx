@@ -1,14 +1,16 @@
 import type { Metadata } from "next";
+import { CONFIG } from "../../src/config/config.ts";
 import "@fontsource-variable/manrope";
 import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
 import "./account.css";
+import "./design.generated.css";
 import { AccountProvider } from "@/lib/account";
 import { AccountPreviewProvider } from "@/lib/account-preview";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.FRONTEND_BASE_URL ?? "http://127.0.0.1:6969",
+    process.env.FRONTEND_BASE_URL ?? CONFIG.frontend.defaultBaseUrl,
   ),
   title: "Mentis — Memory for your coding agent",
   description:

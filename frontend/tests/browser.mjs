@@ -10,6 +10,8 @@ import {
   sourceUrl,
 } from "../lib/demo.ts";
 
+import { assertLayout, widths } from "./layout.mjs";
+
 const workerConfig = JSON.parse(
   await readFile(new URL("../../wrangler.jsonc", import.meta.url), "utf8"),
 );
@@ -88,6 +90,21 @@ async function checkPage(name, viewport) {
   );
 
   const demo = page.getByLabel("Mentis product demonstration", { exact: true });
+  await demo.getByRole("button", { name: /Retain the session cookie/ }).click();
+  assert.match(
+    await demo.locator(".selected-evidence").innerText(),
+    /The browser stays signed in after login/,
+  );
+  await demo.getByRole("button", { name: /Change the login redirect/ }).click();
+  assert.match(
+    await demo.locator(".selected-evidence").innerText(),
+    /Authentication still returns to the sign-in page/,
+  );
+  assert.match(
+    await demo.locator(".selected-evidence").innerText(),
+    /Cookie auth handles this route/,
+  );
+  await assertLayout(page, `${name} record`);
   await demo.getByRole("tab", { name: "Find", exact: true }).click();
   assert.ok(
     await demo.getByText("Similarity 0.92", { exact: true }).isVisible(),
@@ -99,6 +116,7 @@ async function checkPage(name, viewport) {
       .getByText("Git state is reported by the agent.", { exact: true })
       .isVisible(),
   );
+  await assertLayout(page, `${name} inspect`);
   const recordTab = demo.getByRole("tab", { name: "Record", exact: true });
   await recordTab.focus();
   await recordTab.press("ArrowRight");
@@ -357,6 +375,28 @@ try {
     path: resolve(output, "narrow.png"),
     fullPage: true,
   });
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 844 });
+    for (const stage of ["Record", "Find", "Inspect"]) {
+      await page.getByRole("tab", { name: stage, exact: true }).click();
+      await assertLayout(page, `${width}px ${stage}`);
+    }
+  }
+  // A 720 CSS-pixel viewport models a 1440px window at 200% zoom.
+  await page.setViewportSize({ width: 720, height: 500 });
+  await assertLayout(page, "200% zoom layout");
+  await page.evaluate(() => {
+    const clipped = document.createElement("div");
+    clipped.id = "clipping-check";
+    clipped.style.cssText = "height:10px; overflow:hidden";
+    clipped.textContent = "This evidence must not be clipped.";
+    document.body.append(clipped);
+  });
+  await assert.rejects(
+    assertLayout(page, "clipping detector self-check"),
+    /clipped by/,
+  );
+  await page.locator("#clipping-check").evaluate((node) => node.remove());
   await reduced.close();
   const response = await request.newContext();
   const social = await response.get(`${baseUrl}/opengraph-image`);
@@ -383,7 +423,7 @@ try {
     }
     return maximum - minimum;
   });
-  assert.ok(imageRange > 30, "Social preview must contain the landscape");
+  assert.ok(imageRange > 30, "Social preview must contain attempt evidence");
   await socialPage.close();
   await response.dispose();
   report.push({

@@ -5,9 +5,10 @@ import {
   discovery,
   enableNonRepudiationChecks,
 } from "openid-client";
+import { CONFIG } from "../config/config.js";
 import type { GoogleProfile } from "../db/d1.js";
 
-const GOOGLE_ISSUER = new URL("https://accounts.google.com");
+const GOOGLE_ISSUER = new URL(CONFIG.google.issuer);
 
 export function createGoogleAuthorizationRequest(
   configuration: Configuration,

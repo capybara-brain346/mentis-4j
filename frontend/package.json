@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1 --port 6969",
+    "dev": "next dev --hostname localhost --port 6969",
     "build": "next build",
-    "dev:cloudflare": "vite --host 127.0.0.1 --port 6969",
+    "dev:cloudflare": "CLOUDFLARE_ENV=development vite --host localhost --port 6969 --strictPort",
     "build:cloudflare": "npm run build && vite build && cp .next/server/app/opengraph-image.body dist/client/opengraph-image",
     "deploy": "npm run build:cloudflare && wrangler deploy",
     "preview": "next start --hostname 127.0.0.1 --port 3000",
@@ -19,7 +19,13 @@
     "check:browser": "node tests/browser.mjs",
     "check:access": "node tests/access.mjs",
     "test:auth": "node --test tests/auth-proxy.test.mjs",
-    "check:account": "npm run build && node tests/account.mjs"
+    "check:account": "npm run build && node tests/account.mjs",
+    "prepare:assets": "node scripts/prepare-assets.mjs",
+    "predev": "npm run prepare:assets",
+    "prebuild": "npm run prepare:assets",
+    "predev:cloudflare": "npm run prepare:assets",
+    "prebuild:cloudflare": "npm run prepare:assets",
+    "test:icons": "node --test tests/client-icons.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/jetbrains-mono": "^5.2.0",

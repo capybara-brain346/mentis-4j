@@ -14,6 +14,7 @@ import {
   randomState,
 } from "openid-client";
 import { CONFIG } from "../config/config.js";
+import { parsePositiveIntegerEnvironment } from "../config/environment.js";
 import {
   type BrowserSession,
   D1Store,
@@ -25,10 +26,6 @@ import {
   exchangeGoogleCode,
 } from "./google.js";
 
-const ACCESS_TOKEN_TTL_SECONDS = 10 * 60;
-const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
-const PENDING_CONSENT_TTL_SECONDS = 10 * 60;
-const CONSENT_VERSION = "1";
 const SESSION_COOKIE = "__Host-mentis-session";
 const SIGN_IN_COOKIE = "__Host-mentis-sign-in";
 
@@ -125,8 +122,8 @@ export function createOAuthProvider(
     tokenEndpoint: "/oauth/token",
     clientRegistrationEndpoint: "/oauth/register",
     clientIdMetadataDocumentEnabled: true,
-    accessTokenTTL: ACCESS_TOKEN_TTL_SECONDS,
-    refreshTokenTTL: REFRESH_TOKEN_TTL_SECONDS,
+    accessTokenTTL: CONFIG.oauth.accessTokenTtlSeconds,
+    refreshTokenTTL: CONFIG.oauth.refreshTokenTtlSeconds,
     resourceMetadata: {
       resource,
       authorization_servers: [origin],
@@ -149,7 +146,7 @@ export function createOAuthProvider(
       }
       if (grantType === "authorization_code") {
         const expiresAt = new Date(
-          Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000,
+          Date.now() + CONFIG.oauth.refreshTokenTtlSeconds * 1000,
         ).toISOString();
         if (!(await store.setConsentExpiry(authProps.consentId, expiresAt))) {
           throw new OAuthError("invalid_grant", {
@@ -158,9 +155,9 @@ export function createOAuthProvider(
         }
       }
       return {
-        accessTokenTTL: ACCESS_TOKEN_TTL_SECONDS,
+        accessTokenTTL: CONFIG.oauth.accessTokenTtlSeconds,
         ...(grantType === "authorization_code"
-          ? { refreshTokenTTL: REFRESH_TOKEN_TTL_SECONDS }
+          ? { refreshTokenTTL: CONFIG.oauth.refreshTokenTtlSeconds }
           : {}),
       };
     },
@@ -243,7 +240,7 @@ export async function handleBrowserSignIn(
       Location: url.href,
       "Cache-Control": "no-store",
       "Referrer-Policy": "no-referrer",
-      "Set-Cookie": `${SIGN_IN_COOKIE}=${state}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=600`,
+      "Set-Cookie": `${SIGN_IN_COOKIE}=${state}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${CONFIG.oauth.pendingTransactionTtlSeconds}`,
     },
   });
 }
@@ -285,7 +282,10 @@ export async function handleBrowserCallback(
       transaction.verifier,
     );
     const account = await store.getOrCreateGoogleAccount(profile);
-    const ttl = browserSessionTtl(env);
+    const ttl = parsePositiveIntegerEnvironment(
+      env.BROWSER_SESSION_TTL_SECONDS,
+      "BROWSER_SESSION_TTL_SECONDS",
+    );
     const session = await store.createBrowserSession({
       userId: account.user.id,
       expiresAt: new Date(Date.now() + ttl * 1000).toISOString(),
@@ -503,7 +503,10 @@ async function finishGoogleSignIn(
       data.verifier,
     );
     const account = await store.getOrCreateGoogleAccount(profile);
-    const sessionTtl = browserSessionTtl(env);
+    const sessionTtl = parsePositiveIntegerEnvironment(
+      env.BROWSER_SESSION_TTL_SECONDS,
+      "BROWSER_SESSION_TTL_SECONDS",
+    );
     const session = await store.createBrowserSession({
       userId: account.user.id,
       expiresAt: new Date(Date.now() + sessionTtl * 1000).toISOString(),
@@ -558,7 +561,7 @@ ${details.redirectIsLoopback ? "<p>This sends access to an app on your computer.
   // Chrome also checks form-action on redirects after form submission.
   setSecurityHeaders(
     headers,
-    `'self' https://accounts.google.com ${new URL(authRequest.redirectUri).origin}`,
+    `'self' ${new URL(CONFIG.google.issuer).origin} ${new URL(authRequest.redirectUri).origin}`,
   );
   return new Response(html, { status: 200, headers });
 }
@@ -610,9 +613,9 @@ async function completeMcpAuthorization(
     workspaceId: session.workspaceId,
     resource,
     scope: JSON.stringify(scope),
-    consentVersion: CONSENT_VERSION,
+    consentVersion: CONFIG.oauth.consentVersion,
     expiresAt: new Date(
-      Date.now() + PENDING_CONSENT_TTL_SECONDS * 1000,
+      Date.now() + CONFIG.oauth.pendingTransactionTtlSeconds * 1000,
     ).toISOString(),
   });
   const authorization = await oauth.completeAuthorization({
@@ -679,7 +682,7 @@ async function disconnectClient(
   let cursor: string | undefined;
   do {
     const page = await oauth.listUserGrants(session.userId, {
-      limit: 1000,
+      limit: CONFIG.oauth.grantPageLimit,
       ...(cursor ? { cursor } : {}),
     });
     for (const grant of page.items) {
@@ -815,16 +818,6 @@ function sameStrings(left: string[], right: string[]): boolean {
   return (
     left.length === right.length && left.every((value) => right.includes(value))
   );
-}
-
-function browserSessionTtl(env: WorkerEnvironment): number {
-  const value = Number(
-    requiredEnv(env.BROWSER_SESSION_TTL_SECONDS, "BROWSER_SESSION_TTL_SECONDS"),
-  );
-  if (!Number.isSafeInteger(value) || value < 1) {
-    throw new Error("BROWSER_SESSION_TTL_SECONDS must be a positive integer");
-  }
-  return value;
 }
 
 function publicOrigin(env: WorkerEnvironment): string {
