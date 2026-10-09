@@ -38,6 +38,16 @@ Define every configurable variable, constant, and default value in `src/config/c
 
 Use consistent blank lines to make code easy to read. Put one blank line between functions and between groups of statements that do different tasks. Keep related statements together. Avoid large blocks with no blank lines, inconsistent spacing, and repeated blank lines.
 
+## File Organization
+
+When you write or change code, prefer several focused files to one long file.
+
+- Keep each file focused on one clear purpose. Use a file name that describes the code in it.
+- Keep code concise and readable. Do not compress code or remove useful spacing to reduce the line count.
+- Split files by purpose before they grow to hundreds of lines, such as 700 to 900 lines. Use clear responsibilities to select file boundaries.
+- Move helper code and large groups of utility functions into separate files. Use an existing `utils` directory when it is suitable. If no suitable directory exists, create separate files near the code that uses them.
+- Group utility functions by their related purpose. Name each utility file for that purpose. Keep unrelated utilities in separate files.
+
 ## Commands
 
 Run from the repository root:
