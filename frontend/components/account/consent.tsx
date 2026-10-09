@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { ClientMark } from "@/components/account/client-mark";
+import { ClientMark } from "@/components/account/connections";
 import { AccessFrame, GoogleMark } from "@/components/account/shared";
 import { Button } from "@/components/ui/button";
 import {
@@ -138,7 +138,7 @@ export function ConsentView({
           ) : step === "sign-in" ? (
             <div className="consent-sign-in">
               <div className="consent-app-link">
-                <ClientMark name={name} />
+                <ClientMark id={clientId} />
                 <ArrowRight size={20} aria-hidden="true" />
                 <ShieldCheck size={29} aria-hidden="true" />
               </div>
@@ -178,7 +178,7 @@ export function ConsentView({
           ) : (
             <>
               <div className="consent-app-link">
-                <ClientMark name={name} />
+                <ClientMark id={clientId} />
                 <span className="consent-link-line" />
                 <ShieldCheck size={30} aria-hidden="true" />
               </div>

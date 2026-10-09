@@ -153,8 +153,3 @@ docs/experiments/
 
 # Impeccable
 .impeccable/
-
-
-# Generated frontend assets
-frontend/public/icons/
-frontend/app/design.generated.css

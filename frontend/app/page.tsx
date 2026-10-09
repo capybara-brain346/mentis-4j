@@ -1,11 +1,25 @@
-import { ArrowDown, ArrowRight, ArrowUpRight } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowRight,
+  ArrowUpRight,
+  Check,
+  FileCode2,
+  GitBranch,
+  Network,
+  Search,
+} from "lucide-react";
 import Image from "next/image";
 import { Corrections } from "@/components/corrections";
-import { Demo } from "@/components/demo";
+import {
+  AttemptHistory,
+  Demo,
+  RecordFields,
+  SearchResult,
+} from "@/components/demo";
 import { Navigation } from "@/components/navigation";
 import { Setup } from "@/components/setup";
 import { Button } from "@/components/ui/button";
-import { sourceUrl } from "@/lib/demo";
+import { exampleSearch, sourceUrl } from "@/lib/demo";
 
 export default function Home() {
   return (
@@ -18,9 +32,9 @@ export default function Home() {
         <section className="hero container" aria-labelledby="hero-heading">
           <div className="hero-copy">
             <h1 id="hero-heading">
-              Keep the evidence
+              Memory for your
               <br />
-              for the next attempt.
+              coding agent.
             </h1>
             <p>
               Record coding attempts. Find related tasks.
@@ -30,7 +44,7 @@ export default function Home() {
             <div className="hero-actions">
               <Button asChild className="pill">
                 <a href="#setup">
-                  Connect your agent <ArrowDown size={16} aria-hidden="true" />
+                  Get started <ArrowDown size={16} aria-hidden="true" />
                 </a>
               </Button>
               <Button asChild variant="secondary" className="pill">
@@ -41,6 +55,14 @@ export default function Home() {
             </div>
           </div>
           <div className="hero-stage">
+            <Image
+              src="/images/valley.webp"
+              alt=""
+              fill
+              priority
+              sizes="(max-width: 700px) 100vw, 1300px"
+              className="stage-image"
+            />
             <Demo />
           </div>
           <div className="hero-caption">
@@ -54,18 +76,137 @@ export default function Home() {
           className="how-intro container"
           aria-labelledby="how-heading"
         >
-          <h2 id="how-heading">A failed check stays in the record.</h2>
-          <div>
+          <h2 id="how-heading">
+            Give the next attempt
+            <br />a place to start.
+          </h2>
+          <p>
+            A coding task has a history. Mentis keeps the actions, observations,
+            and checks together, so your agent can inspect the work that came
+            before.
+          </p>
+        </section>
+
+        <section
+          id="record"
+          className="feature container"
+          aria-labelledby="record-heading"
+        >
+          <div className="feature-copy">
+            <h2 id="record-heading">
+              Record the attempt.
+              <br />
+              Keep the evidence.
+            </h2>
             <p>
-              For this login task, the redirect change failed. A later attempt
-              retained the session cookie and passed its browser check. Select
-              an attempt above to inspect its evidence.
+              Store what the agent did and what it observed. Keep its inference
+              separate. Add the result of the check that actually ran.
+            </p>
+            <p>A check that did not run is unverified.</p>
+            <a className="text-link" href="#setup">
+              Start recording <ArrowRight size={16} aria-hidden="true" />
+            </a>
+          </div>
+          <div className="feature-visual record-visual">
+            <Image
+              src="/images/layers.webp"
+              alt="Painted layers of amber and stone beside a green river."
+              fill
+              sizes="(max-width: 800px) 100vw, 850px"
+              className="stage-image"
+            />
+            <div className="record-mini product-surface">
+              <div className="mini-title">
+                <FileCode2 size={15} aria-hidden="true" />
+                <code>record_attempt</code>
+              </div>
+              <RecordFields compact />
+              <div className="mini-footer">
+                <Check size={14} aria-hidden="true" />
+                Demonstration data
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="find"
+          className="feature feature-reversed container"
+          aria-labelledby="find-heading"
+        >
+          <div className="feature-copy">
+            <h2 id="find-heading">
+              Find related work.
+              <br />
+              Within your repository.
+            </h2>
+            <p>
+              Search with the problem you have now. Mentis returns related tasks
+              from the repository you specify.
             </p>
             <p>
-              Observation and inference remain separate. A missing check is
-              unverified. Search requires a repository; similarity does not show
-              success.
+              A similar attempt can contain a failed check. Inspect its history
+              before you use the conclusion.
             </p>
+            <a className="text-link" href="#inspect">
+              See the attempt history{" "}
+              <ArrowRight size={16} aria-hidden="true" />
+            </a>
+          </div>
+          <div className="feature-visual find-visual">
+            <div className="search-mini product-surface">
+              <div className="mini-title">
+                <Search size={15} aria-hidden="true" />
+                <code>search</code>
+              </div>
+              <div className="search-repository">
+                <GitBranch size={14} aria-hidden="true" />
+                <span>example / river-app</span>
+              </div>
+              <p className="search-query">{exampleSearch.query}</p>
+              <SearchResult />
+              <div className="mini-footer">Demonstration data</div>
+            </div>
+            <div
+              className="task-graph"
+              role="group"
+              aria-label="One repository contains a task with two attempts"
+            >
+              <div className="graph-node">
+                <Network size={17} aria-hidden="true" />
+                <span>Repository</span>
+              </div>
+              <div className="graph-connector" />
+              <div className="graph-node">
+                <FileCode2 size={17} aria-hidden="true" />
+                <span>Task</span>
+              </div>
+              <div className="graph-connector" />
+              <div className="graph-attempts">
+                <span>Failed attempt</span>
+                <span>Passed attempt</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          id="inspect"
+          className="feature container"
+          aria-labelledby="inspect-heading"
+        >
+          <div className="feature-copy">
+            <h2 id="inspect-heading">
+              Inspect what happened.
+              <br />
+              Including what failed.
+            </h2>
+            <p>
+              Use recall to read a task&apos;s attempts. See the action,
+              observation, check result, and the Git state reported by the
+              agent.
+            </p>
+            <p>The evidence stays available, even when an attempt fails.</p>
             <a
               className="text-link"
               href={`${sourceUrl}/blob/main/src/lib/tools.ts`}
@@ -73,6 +214,26 @@ export default function Home() {
               Read the tool contracts{" "}
               <ArrowUpRight size={16} aria-hidden="true" />
             </a>
+          </div>
+          <div className="feature-visual inspect-visual">
+            <Image
+              src="/images/strata.webp"
+              alt="A painted amber seam runs through layers of stone beside a river."
+              fill
+              sizes="(max-width: 800px) 100vw, 850px"
+              className="stage-image"
+            />
+            <div className="history-mini product-surface">
+              <div className="mini-title">
+                <GitBranch size={15} aria-hidden="true" />
+                <code>recall</code>
+              </div>
+              <h3>Login cookie investigation</h3>
+              <AttemptHistory />
+              <div className="mini-footer">
+                Demonstration data · Agent-reported Git state
+              </div>
+            </div>
           </div>
         </section>
 
@@ -82,9 +243,9 @@ export default function Home() {
         >
           <div className="feature-copy">
             <h2 id="correct-heading">
-              Correct a conclusion.
+              Let a conclusion change.
               <br />
-              Keep its evidence.
+              Keep the original evidence.
             </h2>
             <p>
               Mark an inference outdated when new evidence changes it. The
@@ -93,8 +254,7 @@ export default function Home() {
             </p>
             <p>
               Need to remove an attempt? Forget removes that attempt and its
-              embedding from the live graph. Other attempts remain. Prior
-              responses and backups are not removed.
+              embedding from the live graph. Other attempts remain.
             </p>
           </div>
           <Corrections />

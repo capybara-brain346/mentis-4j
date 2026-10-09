@@ -13,7 +13,6 @@
       "components/**",
       "lib/**",
       "tests/**",
-      "scripts/**",
       "*.json",
       "*.ts",
       "*.mjs",

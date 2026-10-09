@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  ArrowRight,
   Check,
   CircleCheck,
   FileCode2,
   GitBranch,
+  Network,
   Pause,
   Play,
   Search,
@@ -13,14 +15,7 @@ import {
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  exampleRepository,
-  exampleSearch,
-  failedAttempt,
-  passedAttempt,
-} from "@/lib/demo";
-import { PUBLIC_CONFIG } from "../../src/config/config.ts";
-import type { RecordAttemptInput } from "../../src/lib/graph";
+import { exampleSearch, failedAttempt, passedAttempt } from "@/lib/demo";
 
 function subscribeToMotion(callback: () => void) {
   const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -49,26 +44,26 @@ export function Status({
   );
 }
 
-export function RecordFields({ attempt }: { attempt: RecordAttemptInput }) {
+export function RecordFields({ compact = false }: { compact?: boolean }) {
   return (
-    <dl className="record-fields">
+    <dl className={`record-fields ${compact ? "compact" : ""}`}>
       <div>
         <dt>Action</dt>
-        <dd>{attempt.action}</dd>
+        <dd>{passedAttempt.action}</dd>
       </div>
       <div>
         <dt>Observation</dt>
-        <dd>{attempt.observation}</dd>
+        <dd>{passedAttempt.observation}</dd>
       </div>
       <div>
         <dt>Inference</dt>
-        <dd>{attempt.inference ?? "No inference recorded"}</dd>
+        <dd className="muted">No inference recorded</dd>
       </div>
       <div>
         <dt>Check</dt>
         <dd>
-          <span>{attempt.check?.method ?? "No check recorded"}</span>
-          <Status result={attempt.check?.result ?? "unverified"} />
+          <span>{passedAttempt.check.method}</span>
+          <Status result="passed" />
         </dd>
       </div>
     </dl>
@@ -129,7 +124,6 @@ export function SearchResult() {
 export function Demo() {
   const [stage, setStage] = useState("record");
   const [paused, setPaused] = useState(true);
-  const [selected, setSelected] = useState<"failed" | "passed">("failed");
   const reducedMotion = useSyncExternalStore(
     subscribeToMotion,
     () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
@@ -146,7 +140,7 @@ export function Demo() {
               ? "inspect"
               : "record",
         ),
-      PUBLIC_CONFIG.frontend.demoIntervalMs,
+      6000,
     );
     return () => window.clearInterval(timer);
   }, [paused, reducedMotion]);
@@ -157,14 +151,37 @@ export function Demo() {
       role="group"
       aria-label="Mentis product demonstration"
     >
-      <header className="demo-heading">
-        <div>
-          <h2>Login cookie investigation</h2>
-          <p className="demo-repository">{exampleRepository}</p>
+      <div className="window-title">
+        <div className="window-dots" aria-hidden="true">
+          <i />
+          <i />
+          <i />
         </div>
+        <span>Mentis / river-app</span>
         <span className="demo-label">Demonstration data</span>
-      </header>
+      </div>
       <div className="demo-layout">
+        <aside className="demo-sidebar">
+          <div className="sidebar-title">
+            <Network size={15} aria-hidden="true" />
+            Repository memory
+          </div>
+          <p className="repo-name">example / river-app</p>
+          <div className="sidebar-task">
+            <CircleCheck size={16} aria-hidden="true" />
+            <div>
+              Login cookie investigation<small>2 attempts recorded</small>
+            </div>
+          </div>
+          <div className="sidebar-file">
+            <FileCode2 size={14} aria-hidden="true" />
+            <code>src/Login.tsx</code>
+          </div>
+          <div className="sidebar-footer">
+            <span className="connection-dot" />
+            Local example
+          </div>
+        </aside>
         <Tabs
           value={stage}
           onValueChange={(value) => {
@@ -215,48 +232,13 @@ export function Demo() {
               <code>record_attempt</code>
               <span>New attempt</span>
             </div>
-            <h2>Compare the two attempts.</h2>
-            <div
-              className="attempt-choices"
-              role="group"
-              aria-label="Select an attempt"
-            >
-              <Button
-                variant="ghost"
-                className="attempt-choice"
-                aria-pressed={selected === "failed"}
-                onClick={() => setSelected("failed")}
-              >
-                <span>Change the login redirect</span>
-                <Status result="failed" />
-              </Button>
-              <Button
-                variant="ghost"
-                className="attempt-choice"
-                aria-pressed={selected === "passed"}
-                onClick={() => setSelected("passed")}
-              >
-                <span>Retain the session cookie</span>
-                <Status result="passed" />
-              </Button>
+            <h2>Keep the work. Keep the evidence.</h2>
+            <RecordFields />
+            <div className="record-confirmation">
+              <CircleCheck size={15} aria-hidden="true" />
+              Attempt recorded
+              <ArrowRight size={15} aria-hidden="true" />
             </div>
-            <div
-              className="selected-evidence"
-              role="region"
-              aria-label="Selected attempt evidence"
-              aria-live="polite"
-            >
-              <RecordFields
-                attempt={selected === "failed" ? failedAttempt : passedAttempt}
-              />
-            </div>
-            <p className="history-note">
-              A passed check does not prove the earlier inference. Both records
-              remain available.
-            </p>
-            <footer className="record-confirmation">
-              Demonstration data · No database connection
-            </footer>
           </TabsContent>
           <TabsContent value="find" className="demo-content">
             <div className="tool-call">
@@ -280,6 +262,27 @@ export function Demo() {
             <p className="history-note">Git state is reported by the agent.</p>
           </TabsContent>
         </Tabs>
+        <aside className="evidence-panel">
+          <h3>One task. A record of the work.</h3>
+          <p>Login cookie investigation</p>
+          <div className="evidence-row">
+            <X size={16} aria-hidden="true" />
+            <span>
+              Change redirect<small>Browser test failed</small>
+            </span>
+          </div>
+          <div className="evidence-line" aria-hidden="true" />
+          <div className="evidence-row">
+            <Check size={16} aria-hidden="true" />
+            <span>
+              Retain cookie<small>Browser test passed</small>
+            </span>
+          </div>
+          <div className="evidence-footer">
+            <span>Original evidence</span>
+            <strong>Available for inspection</strong>
+          </div>
+        </aside>
       </div>
     </div>
   );

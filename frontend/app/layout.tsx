@@ -4,7 +4,6 @@ import "@fontsource-variable/manrope";
 import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
 import "./account.css";
-import "./design.generated.css";
 import { AccountProvider } from "@/lib/account";
 import { AccountPreviewProvider } from "@/lib/account-preview";
 

@@ -2,10 +2,12 @@
 
 import {
   ArrowRight,
+  Check,
   CircleAlert,
   ExternalLink,
   LockKeyhole,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -25,7 +27,10 @@ export function SignInView({ error = "" }: { error?: string }) {
     <AccessFrame>
       <main className="sign-in-layout" id="main-content">
         <section className="sign-in-form">
-          <h1>Sign in to Mentis.</h1>
+          <h1>
+            A little memory.
+            <br />A better next step.
+          </h1>
           <p className="sign-in-intro">
             Sign in to manage your private workspace and the coding agents that
             can use it.
@@ -81,33 +86,31 @@ export function SignInView({ error = "" }: { error?: string }) {
             </Link>
           </p>
         </section>
-        <aside className="sign-in-access" aria-label="Workspace access">
-          <h2>Your workspace. Your access.</h2>
-          <p>
-            Google verifies your identity. You choose which coding agents can
-            use your memory.
-          </p>
-          <dl>
+        <aside
+          className="sign-in-scene"
+          aria-label="Mentis workspace introduction"
+        >
+          <Image
+            src="/images/valley.webp"
+            alt="A painted mountain valley with a river and forest"
+            fill
+            priority
+            sizes="(max-width: 800px) 100vw, 50vw"
+          />
+          <div className="scene-caption">
+            <span className="scene-caption-title">
+              Keep the evidence.
+              <br />
+              Carry it forward.
+            </span>
+            <p>
+              A private place for what your agent tried, observed, and learned.
+            </p>
             <div>
-              <dt>Account</dt>
-              <dd>Your Google identity</dd>
+              <Check size={16} aria-hidden="true" /> One account. One private
+              workspace.
             </div>
-            <div>
-              <dt>Workspace</dt>
-              <dd>Private memory for your agents</dd>
-            </div>
-            <div>
-              <dt>Client access</dt>
-              <dd>
-                Read, write, and delete memory. Review permissions before
-                approval.
-              </dd>
-            </div>
-          </dl>
-          <p>
-            Disconnect a client to stop its access. Stored memory remains in
-            Mentis.
-          </p>
+          </div>
         </aside>
       </main>
     </AccessFrame>

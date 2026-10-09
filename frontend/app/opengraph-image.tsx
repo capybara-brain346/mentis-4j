@@ -1,17 +1,16 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
-import { PUBLIC_CONFIG } from "../../src/config/config.ts";
 
 export const alt = "Mentis. Memory for your coding agent.";
-export const size = {
-  width: PUBLIC_CONFIG.frontend.design.socialWidth,
-  height: PUBLIC_CONFIG.frontend.design.socialHeight,
-};
+export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const dynamic = "force-static";
 
 export default async function SocialImage() {
+  const landscape = await readFile(
+    join(process.cwd(), "assets/social-valley.jpg"),
+  );
   const logo = await readFile(
     join(process.cwd(), "public/images/mentis-logo.png"),
   );
@@ -22,8 +21,8 @@ export default async function SocialImage() {
         flexDirection: "column",
         width: "100%",
         height: "100%",
-        background: PUBLIC_CONFIG.frontend.design.colors.background,
-        color: PUBLIC_CONFIG.frontend.design.colors.foreground,
+        background: "#f7f7f3",
+        color: "#242721",
         padding: "48px 60px",
         fontFamily: "sans-serif",
       }}
@@ -53,71 +52,20 @@ export default async function SocialImage() {
         style={{
           fontSize: 22,
           display: "flex",
-          color: PUBLIC_CONFIG.frontend.design.colors.muted,
+          color: "#60655c",
           marginTop: 16,
         }}
       >
         Record coding attempts. Find related tasks. Inspect what happened.
       </div>
-      <div
-        style={{
-          display: "flex",
-          gap: 24,
-          marginTop: 36,
-          padding: 28,
-          background: PUBLIC_CONFIG.frontend.design.colors.surface,
-          borderRadius: 12,
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            width: "50%",
-            gap: 14,
-          }}
-        >
-          <span style={{ fontSize: 24 }}>Change the login redirect</span>
-          <span
-            style={{
-              fontSize: 20,
-              color: PUBLIC_CONFIG.frontend.design.colors.red,
-            }}
-          >
-            Check failed
-          </span>
-          <span style={{ fontSize: 18 }}>Browser returns to sign-in.</span>
-        </div>
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            width: "50%",
-            gap: 14,
-          }}
-        >
-          <span style={{ fontSize: 24 }}>Retain the session cookie</span>
-          <span
-            style={{
-              fontSize: 20,
-              color: PUBLIC_CONFIG.frontend.design.colors.green,
-            }}
-          >
-            Check passed
-          </span>
-          <span style={{ fontSize: 18 }}>Browser stays signed in.</span>
-        </div>
-      </div>
-      <span
-        style={{
-          display: "flex",
-          fontSize: 16,
-          marginTop: 18,
-          color: PUBLIC_CONFIG.frontend.design.colors.muted,
-        }}
-      >
-        Demonstration data · Both attempts remain available.
-      </span>
+      {/* biome-ignore lint/performance/noImgElement: ImageResponse requires a native image element. */}
+      <img
+        src={`data:image/jpeg;base64,${landscape.toString("base64")}`}
+        alt=""
+        width={1080}
+        height={230}
+        style={{ objectFit: "cover", marginTop: 34, borderRadius: 6 }}
+      />
     </div>,
     size,
   );

@@ -6,23 +6,36 @@ import {
   Check,
   ChevronDown,
   CircleAlert,
+  CodeXml,
   ExternalLink,
   LockKeyhole,
   Plus,
   Search,
+  Terminal,
   Unplug,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { Dialog } from "radix-ui";
 import { useState } from "react";
-import { ClientMark } from "@/components/account/client-mark";
 import { CopyButton } from "@/components/account/shared";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAccount } from "@/lib/account";
 import { type ClientId, type Connection } from "@/lib/account-preview";
 import { mcpServerUrl } from "@/lib/demo";
+
+export function ClientMark({ id }: { id: string }) {
+  return (
+    <span className={`client-mark ${id}`}>
+      {id === "cursor" ? (
+        <CodeXml size={24} aria-hidden="true" />
+      ) : (
+        <Terminal size={24} aria-hidden="true" />
+      )}
+    </span>
+  );
+}
 
 function ConnectionRow({
   client,
@@ -36,7 +49,7 @@ function ConnectionRow({
   return (
     <article className="connection-row">
       <div className="connection-main">
-        <ClientMark name={client.name} />
+        <ClientMark id={client.id} />
         <div className="client-identity">
           <h2>{client.name}</h2>
           <p>{client.description}</p>
@@ -48,6 +61,23 @@ function ConnectionRow({
               ? "Access expired"
               : "Disconnected"}
         </span>
+        <div className="connection-action">
+          {client.status === "active" ? (
+            <Button
+              variant="outline"
+              className="account-button"
+              onClick={onDisconnect}
+            >
+              Disconnect
+            </Button>
+          ) : (
+            <Button asChild variant="outline" className="account-button">
+              <Link href={`/authorize?preview=1&client=${client.id}`}>
+                Reconnect <ArrowRight aria-hidden="true" />
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
       <div className="connection-meta">
         <span>
@@ -94,23 +124,6 @@ function ConnectionRow({
           </div>
         </dl>
       </details>
-      <div className="connection-action">
-        {client.status === "active" ? (
-          <Button
-            variant="outline"
-            className="account-button"
-            onClick={onDisconnect}
-          >
-            Disconnect
-          </Button>
-        ) : (
-          <Button asChild variant="outline" className="account-button">
-            <Link href={`/authorize?preview=1&client=${client.id}`}>
-              Reconnect <ArrowRight aria-hidden="true" />
-            </Link>
-          </Button>
-        )}
-      </div>
     </article>
   );
 }
