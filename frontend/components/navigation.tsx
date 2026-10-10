@@ -1,18 +1,5 @@
-"use client";
-
-import { ArrowUpRight, Menu } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { sourceUrl } from "@/lib/demo";
 
 export function Navigation() {
@@ -28,51 +15,20 @@ export function Navigation() {
         />
         <span>mentis</span>
       </a>
-      <nav className="desktop-nav" aria-label="Main navigation">
-        <a href="#how-it-works">How it works</a>
-        <a href="#setup">Setup</a>
-        <a href={sourceUrl}>
-          View source <ArrowUpRight aria-hidden="true" size={14} />
-        </a>
+      <nav className="landing-nav" aria-label="Main navigation">
         <Link href="/sign-in">Sign in</Link>
-      </nav>
-      <Button asChild className="pill header-cta">
-        <a href="#setup">Get started</a>
-      </Button>
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="phone-menu"
-            aria-label="Open navigation"
+        <a href={sourceUrl} className="github-link" aria-label="GitHub">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
           >
-            <Menu aria-hidden="true" />
-          </Button>
-        </SheetTrigger>
-        <SheetContent className="mobile-navigation">
-          <SheetHeader>
-            <SheetTitle>mentis</SheetTitle>
-            <SheetDescription>Memory for your coding agent.</SheetDescription>
-          </SheetHeader>
-          <nav aria-label="Phone navigation">
-            <SheetClose asChild>
-              <Link href="/sign-in">Sign in</Link>
-            </SheetClose>
-            <SheetClose asChild>
-              <a href="#how-it-works">How it works</a>
-            </SheetClose>
-            <SheetClose asChild>
-              <a href="#setup">Setup</a>
-            </SheetClose>
-            <SheetClose asChild>
-              <a href={sourceUrl}>
-                View source <ArrowUpRight aria-hidden="true" size={18} />
-              </a>
-            </SheetClose>
-          </nav>
-        </SheetContent>
-      </Sheet>
+            <path d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.86c-2.78.6-3.37-1.18-3.37-1.18-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.61.07-.61 1 .07 1.53 1.03 1.53 1.03.89 1.53 2.34 1.09 2.91.83.09-.64.35-1.09.64-1.34-2.22-.25-4.56-1.11-4.56-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.03A9.58 9.58 0 0 1 12 6.83c.85 0 1.71.11 2.51.34 1.91-1.3 2.75-1.03 2.75-1.03.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.94.36.31.68.92.68 1.85v2.75c0 .26.18.57.69.48A10 10 0 0 0 12 2Z" />
+          </svg>
+        </a>
+      </nav>
     </header>
   );
 }

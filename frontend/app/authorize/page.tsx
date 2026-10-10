@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { ConsentView } from "@/components/account/consent";
 import { backendOrigin } from "@/lib/auth-proxy";
 
 export const metadata: Metadata = {
   title: "Client access — Mentis",
   robots: { index: false, follow: false },
 };
+
 export default async function AuthorizePage({
   searchParams,
 }: {
@@ -26,17 +26,5 @@ export default async function AuthorizePage({
     }
     redirect(`${backendOrigin()}/authorize?${query}`);
   }
-  return (
-    <ConsentView
-      isPreview={params.preview === "1"}
-      clientId={
-        params.client === "claude"
-          ? "claude"
-          : params.client === "codex"
-            ? "codex"
-            : "cursor"
-      }
-      expired={params.state === "expired"}
-    />
-  );
+  redirect("/connections");
 }

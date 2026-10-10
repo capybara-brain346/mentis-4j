@@ -1,13 +1,10 @@
 "use client";
 
 import {
-  ArrowRight,
   Cable,
   Check,
   ChevronDown,
-  CircleAlert,
   CodeXml,
-  ExternalLink,
   LockKeyhole,
   Plus,
   Search,
@@ -15,20 +12,27 @@ import {
   Unplug,
   X,
 } from "lucide-react";
-import Link from "next/link";
 import { Dialog } from "radix-ui";
 import { useState } from "react";
-import { CopyButton } from "@/components/account/shared";
+import { AgentSetup } from "@/components/agent-setup";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAccount } from "@/lib/account";
-import { type ClientId, type Connection } from "@/lib/account-preview";
-import { mcpServerUrl } from "@/lib/demo";
+import { type Connection, useAccount } from "@/lib/account";
 
-export function ClientMark({ id }: { id: string }) {
+export function ClientMark({ name }: { name: string }) {
+  const normalized = name.toLowerCase();
+  const logo = normalized.includes("claude")
+    ? "claude"
+    : normalized.includes("codex")
+      ? "codex"
+      : normalized.includes("openai")
+        ? "openai"
+        : null;
   return (
-    <span className={`client-mark ${id}`}>
-      {id === "cursor" ? (
+    <span className="client-mark">
+      {logo ? (
+        <Logo name={logo} />
+      ) : normalized.includes("cursor") ? (
         <CodeXml size={24} aria-hidden="true" />
       ) : (
         <Terminal size={24} aria-hidden="true" />
@@ -40,16 +44,14 @@ export function ClientMark({ id }: { id: string }) {
 function ConnectionRow({
   client,
   onDisconnect,
-  isPreview,
 }: {
   client: Connection;
   onDisconnect: () => void;
-  isPreview: boolean;
 }) {
   return (
     <article className="connection-row">
       <div className="connection-main">
-        <ClientMark id={client.id} />
+        <ClientMark name={client.name} />
         <div className="client-identity">
           <h2>{client.name}</h2>
           <p>{client.description}</p>
@@ -71,22 +73,11 @@ function ConnectionRow({
               Disconnect
             </Button>
           ) : (
-            <Button asChild variant="outline" className="account-button">
-              <Link href={`/authorize?preview=1&client=${client.id}`}>
-                Reconnect <ArrowRight aria-hidden="true" />
-              </Link>
-            </Button>
+            <ConnectDialog />
           )}
         </div>
       </div>
       <div className="connection-meta">
-        <span>
-          {client.status === "active"
-            ? `Access ends ${isPreview ? client.expires : new Date(client.expires).toLocaleDateString()}`
-            : client.status === "expired"
-              ? `Expired ${client.expires}`
-              : "No access to this workspace"}
-        </span>
         <span className="connection-permissions">
           Read, write, and delete memory
         </span>
@@ -98,22 +89,7 @@ function ConnectionRow({
         <dl>
           <div>
             <dt>Approved</dt>
-            <dd>
-              {isPreview
-                ? client.connected
-                : new Date(client.connected).toLocaleString()}
-            </dd>
-          </div>
-          <div>
-            <dt>Grant period</dt>
-            <dd>7 days from first token exchange</dd>
-          </div>
-          <div>
-            <dt>Client identity</dt>
-            <dd>
-              {isPreview ? "Example registered client." : "Registered client."}{" "}
-              Name is not verified.
-            </dd>
+            <dd>{new Date(client.connected).toLocaleString()}</dd>
           </div>
           <div>
             <dt>Permissions</dt>
@@ -128,22 +104,7 @@ function ConnectionRow({
   );
 }
 
-function ConnectDialog() {
-  const [serverUrl, setServerUrl] = useState(mcpServerUrl);
-  const [clientId, setClientId] = useState<ClientId>("cursor");
-  const [urlError, setUrlError] = useState("");
-  let valid = false;
-  try {
-    valid = new URL(serverUrl).protocol === "https:";
-  } catch {
-    /* Native input reports invalid URLs. */
-  }
-  const config = JSON.stringify(
-    { mcpServers: { mentis: { url: serverUrl } } },
-    null,
-    2,
-  );
-  const command = `claude mcp add --transport http mentis '${serverUrl.replace(/'/g, "'\\''")}'`;
+export function ConnectDialog() {
   return (
     <Dialog.Root>
       <Dialog.Trigger asChild>
@@ -166,101 +127,9 @@ function ConnectDialog() {
           </Dialog.Close>
           <Dialog.Title>Connect your coding agent</Dialog.Title>
           <Dialog.Description>
-            Add the Mentis server to your client, then approve access in your
-            browser.
+            Add Mentis to your agent. Sign in with Google when you connect.
           </Dialog.Description>
-          <div className="setup-url">
-            <label htmlFor="server-url">MCP server URL</label>
-            <input
-              id="server-url"
-              type="url"
-              value={serverUrl}
-              onChange={(event) => {
-                setServerUrl(event.target.value);
-                setUrlError("");
-              }}
-              onBlur={() =>
-                setUrlError(valid ? "" : "Enter a valid HTTPS server URL.")
-              }
-              aria-describedby="server-url-note server-url-error"
-              aria-invalid={urlError ? true : undefined}
-            />
-            <p id="server-url-note">
-              Hosted Mentis Worker. Change this only for your own deployment.
-            </p>
-            <span id="server-url-error" className="field-error" role="status">
-              {urlError}
-            </span>
-          </div>
-          <Tabs
-            defaultValue="cursor"
-            onValueChange={(value) =>
-              setClientId(value === "claude" ? "claude" : "cursor")
-            }
-            className="client-setup-tabs"
-          >
-            <TabsList aria-label="Choose your MCP client">
-              <TabsTrigger value="cursor">Cursor</TabsTrigger>
-              <TabsTrigger value="claude">Claude Code</TabsTrigger>
-              <TabsTrigger value="other">Other clients</TabsTrigger>
-            </TabsList>
-            <TabsContent value="cursor">
-              <h3>Add a remote MCP server</h3>
-              <p>
-                Open Cursor’s MCP settings. Add this configuration to your MCP
-                configuration file.
-              </p>
-              <div className="setup-code">
-                <div>
-                  <span>mcp.json</span>
-                  {valid && (
-                    <CopyButton value={config} label="Copy configuration" />
-                  )}
-                </div>
-                <pre tabIndex={0}>{config}</pre>
-              </div>
-            </TabsContent>
-            <TabsContent value="claude">
-              <h3>Add Mentis from the command line</h3>
-              <p>
-                Run the command below, then open Claude Code to complete
-                sign-in.
-              </p>
-              <div className="setup-code">
-                <div>
-                  <span>Terminal</span>
-                  {valid && <CopyButton value={command} label="Copy command" />}
-                </div>
-                <pre tabIndex={0}>{command}</pre>
-              </div>
-            </TabsContent>
-            <TabsContent value="other">
-              <h3>Use an HTTP MCP connection</h3>
-              <p>
-                Add the server URL in your client’s MCP settings. Use a client
-                that supports remote HTTP servers and OAuth sign-in.
-              </p>
-              <div className="setup-code">
-                <div>
-                  <span>Server URL</span>
-                  {valid && <CopyButton value={serverUrl} label="Copy URL" />}
-                </div>
-                <pre tabIndex={0}>{serverUrl}</pre>
-              </div>
-            </TabsContent>
-          </Tabs>
-          <div className="setup-next">
-            <LockKeyhole size={18} aria-hidden="true" />
-            <p>
-              Your client opens a consent screen. Review all permissions before
-              you allow access.
-            </p>
-          </div>
-          <Button asChild className="account-button setup-preview-button">
-            <Link href={`/authorize?preview=1&client=${clientId}`}>
-              Preview consent <ExternalLink aria-hidden="true" />
-            </Link>
-          </Button>
+          <AgentSetup />
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
@@ -268,7 +137,7 @@ function ConnectDialog() {
 }
 
 export function ConnectionsView() {
-  const { connections, disconnect, isPreview, busy, error } = useAccount();
+  const { connections, disconnect, busy, error } = useAccount();
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("all");
   const [selected, setSelected] = useState<Connection | null>(null);
@@ -286,9 +155,7 @@ export function ConnectionsView() {
     try {
       await disconnect(selected.id);
       setNotice(
-        isPreview
-          ? `${selected.name} disconnected in this preview. It has no access to the example workspace.`
-          : `${selected.name} disconnected. It no longer has access to your workspace.`,
+        `${selected.name} disconnected. It no longer has access to your memory.`,
       );
       setSelected(null);
     } catch {
@@ -300,7 +167,7 @@ export function ConnectionsView() {
       <div className="page-heading heading-with-action">
         <div>
           <h1>Connected clients</h1>
-          <p>Choose which coding agents can use your workspace.</p>
+          <p>Manage agent access to your memory.</p>
         </div>
         <ConnectDialog />
       </div>
@@ -348,7 +215,6 @@ export function ConnectionsView() {
             <ConnectionRow
               key={client.id}
               client={client}
-              isPreview={isPreview}
               onDisconnect={() => setSelected(client)}
             />
           ))
@@ -381,14 +247,6 @@ export function ConnectionsView() {
           </>
         )}
       </p>
-      <div className="connections-footnote">
-        <CircleAlert size={17} aria-hidden="true" />
-        <p>
-          Access expires seven days after the first token exchange. Clients must
-          request approval again when the grant ends. Disconnecting does not
-          delete your memory.
-        </p>
-      </div>
       <Dialog.Root
         open={selected !== null}
         onOpenChange={(open) => {
@@ -420,7 +278,6 @@ export function ConnectionsView() {
             </Dialog.Description>
             <p className="disconnect-note">
               Your stored memory will stay in Mentis.
-              {isPreview ? " This action changes example data only." : ""}
             </p>
             {error && (
               <p className="inline-alert" role="alert">

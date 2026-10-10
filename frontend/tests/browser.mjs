@@ -80,27 +80,170 @@ async function checkPage(name, viewport) {
   );
   assert.equal(
     await page
-      .locator("a")
-      .filter({ hasText: "View source" })
-      .first()
+      .getByRole("link", { name: "GitHub", exact: true })
       .getAttribute("href"),
     sourceUrl,
   );
+  assert.equal(await page.getByText("View source", { exact: true }).count(), 0);
+  assert.equal(
+    await page.getByText("Demonstration data", { exact: true }).count(),
+    0,
+  );
 
   const demo = page.getByLabel("Mentis product demonstration", { exact: true });
-  await demo.getByRole("tab", { name: "Find", exact: true }).click();
+  await demo.getByRole("tab", { name: "2 Find", exact: true }).click();
   assert.ok(
     await demo.getByText("Similarity 0.92", { exact: true }).isVisible(),
   );
-  await demo.getByRole("tab", { name: "Inspect", exact: true }).click();
-  assert.ok(await demo.getByText("Check failed", { exact: true }).isVisible());
+  await demo.getByRole("tab", { name: "3 Inspect", exact: true }).click();
+  const graph = demo.getByRole("group", {
+    name: "Interactive memory graph",
+    exact: true,
+  });
+  const canvas = graph.locator(".inspect-canvas");
+  const scene = graph.locator(".graph-scene");
+  const properties = graph.locator(".graph-properties");
+  assert.equal(await graph.locator("[data-node]").count(), 4);
+  assert.equal(await graph.locator("[data-edge]").count(), 3);
+  for (const [node, title] of [
+    ["Repository", "Repository"],
+    ["Login task", "Login cookie investigation"],
+    ["Redirect", "Change the login redirect"],
+    ["Cookie", "Retain the session cookie over local HTTP"],
+  ]) {
+    await graph
+      .getByRole("button", { name: `Inspect ${node}`, exact: true })
+      .click();
+    assert.ok(
+      await properties
+        .getByRole("heading", { name: title, exact: true })
+        .isVisible(),
+    );
+  }
+  assert.ok(
+    await properties.getByText("Check passed", { exact: true }).isVisible(),
+  );
+  await graph
+    .getByRole("button", { name: "Inspect Redirect", exact: true })
+    .press("Enter");
+  assert.ok(
+    await properties.getByText("Check failed", { exact: true }).isVisible(),
+  );
+  assert.ok(await properties.getByText("a8c3f2", { exact: true }).isVisible());
+  for (const [relation, type, target] of [
+    [
+      "Repository HAS_TASK Login task",
+      "HAS_TASK",
+      "Login cookie investigation",
+    ],
+    [
+      "Login task HAS_ATTEMPT Redirect",
+      "HAS_ATTEMPT",
+      "Change the login redirect",
+    ],
+    [
+      "Login task HAS_ATTEMPT Cookie",
+      "HAS_ATTEMPT",
+      "Retain the session cookie over local HTTP",
+    ],
+  ]) {
+    await graph.getByRole("button", { name: relation, exact: true }).click();
+    assert.ok(
+      await properties
+        .getByRole("heading", { name: type, exact: true })
+        .isVisible(),
+    );
+    assert.ok(await properties.getByText(target, { exact: true }).isVisible());
+  }
+  const failedNode = graph.locator('[data-node="failed"]');
+  const initialPosition = await failedNode.getAttribute("transform");
+  const nodeBounds = await failedNode.locator("circle").boundingBox();
+  const canvasBounds = await canvas.boundingBox();
+  await page.mouse.move(
+    nodeBounds.x + nodeBounds.width / 2,
+    nodeBounds.y + nodeBounds.height / 2,
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    nodeBounds.x + nodeBounds.width / 2 - 15,
+    nodeBounds.y + nodeBounds.height / 2 + 20,
+    { steps: 4 },
+  );
+  await page.mouse.up();
+  assert.notEqual(
+    await failedNode.getAttribute("transform"),
+    initialPosition,
+    "Dragging must move the node",
+  );
+  assert.equal(
+    await properties.getByRole("heading").innerText(),
+    "HAS_ATTEMPT",
+    "Dragging must not change selection",
+  );
+  const initialView = await scene.getAttribute("transform");
+  await page.mouse.move(canvasBounds.x + 10, canvasBounds.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(canvasBounds.x + 30, canvasBounds.y + 20, { steps: 4 });
+  await page.mouse.up();
+  assert.notEqual(
+    await scene.getAttribute("transform"),
+    initialView,
+    "Dragging the background must pan",
+  );
+  await graph.getByRole("button", { name: "Zoom in", exact: true }).click();
+  assert.equal(
+    await graph.getByLabel("Graph zoom", { exact: true }).innerText(),
+    "120%",
+  );
+  await graph.getByRole("button", { name: "Zoom out", exact: true }).click();
+  assert.equal(
+    await graph.getByLabel("Graph zoom", { exact: true }).innerText(),
+    "100%",
+  );
+  for (let i = 0; i < 5; i++)
+    await graph.getByRole("button", { name: "Zoom in", exact: true }).click();
+  assert.equal(
+    await graph
+      .getByRole("button", { name: "Zoom in", exact: true })
+      .isEnabled(),
+    false,
+  );
+  for (let i = 0; i < 7; i++)
+    await graph.getByRole("button", { name: "Zoom out", exact: true }).click();
+  assert.equal(
+    await graph
+      .getByRole("button", { name: "Zoom out", exact: true })
+      .isEnabled(),
+    false,
+  );
+  await graph.getByRole("button", { name: "Reset graph", exact: true }).click();
+  assert.equal(await failedNode.getAttribute("transform"), initialPosition);
+  assert.equal(await scene.getAttribute("transform"), initialView);
+  assert.ok(
+    await properties
+      .getByRole("heading", { name: "Login cookie investigation", exact: true })
+      .isVisible(),
+  );
+  await graph
+    .getByRole("button", { name: "Inspect Redirect", exact: true })
+    .click();
+  const graphAudit = await new AxeBuilder({ page })
+    .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+    .analyze();
+  assert.deepEqual(graphAudit.violations, []);
+  await demo.screenshot({ path: resolve(output, `${name}-inspect.png`) });
   assert.ok(
     await demo
       .getByText("Git state is reported by the agent.", { exact: true })
       .isVisible(),
   );
-  const recordTab = demo.getByRole("tab", { name: "Record", exact: true });
+  const recordTab = demo.getByRole("tab", { name: "1 Record", exact: true });
   await recordTab.focus();
+  const focusStyle = await recordTab.evaluate((node) => {
+    const style = getComputedStyle(node);
+    return { outline: style.outlineStyle, shadow: style.boxShadow };
+  });
+  assert.deepEqual(focusStyle, { outline: "none", shadow: "none" });
   await recordTab.press("ArrowRight");
   await demo
     .locator('[role="tab"][aria-selected="true"]')
@@ -108,82 +251,106 @@ async function checkPage(name, viewport) {
     .waitFor();
   assert.equal(
     await demo
-      .getByRole("tab", { name: "Find", exact: true })
+      .getByRole("tab", { name: "2 Find", exact: true })
       .getAttribute("aria-selected"),
     "true",
   );
   await recordTab.click();
-  await demo.getByRole("button", { name: "Play demo", exact: true }).click();
-  assert.ok(
-    await demo
-      .getByRole("button", { name: "Pause demo", exact: true })
-      .isVisible(),
-  );
-  await page.waitForTimeout(6200);
   assert.equal(
-    await demo
-      .getByRole("tab", { name: "Find", exact: true })
-      .getAttribute("aria-selected"),
-    "true",
+    await page.getByRole("link", { name: "Get started", exact: true }).count(),
+    1,
   );
-  await demo.getByRole("button", { name: "Pause demo", exact: true }).click();
-  await recordTab.click();
-
-  const correction = page.locator(".correction-demo");
-  await correction
-    .getByRole("button", { name: "Mark example outdated", exact: true })
-    .click();
-  assert.ok(
-    await correction
-      .getByText("Conclusion outdated", { exact: true })
-      .isVisible(),
+  assert.equal(
+    await page.locator(".memory-flow, .correction-demo, .feature").count(),
+    0,
   );
-  assert.ok(
-    await correction
-      .getByText("Cookie auth handles this route.", { exact: true })
-      .isVisible(),
+  assert.equal(await page.locator(".memory-map").count(), 1);
+  assert.equal(await page.locator(".agent-logos img").count(), 6);
+  assert.equal(
+    await page.locator('.agent-logos [aria-label="OpenAI"]').count(),
+    0,
   );
-  await correction
-    .getByRole("tab", { name: "Remove attempt", exact: true })
-    .click();
-  await correction
-    .getByRole("button", { name: "Remove example", exact: true })
-    .click();
-  assert.ok(
-    await correction
-      .getByText("Example attempt removed.", { exact: true })
-      .isVisible(),
+  assert.equal(
+    await page.getByText("Your coding agent", { exact: true }).count(),
+    0,
   );
-  await correction
-    .getByRole("button", { name: "Reset example", exact: true })
-    .click();
-  assert.ok(
-    await correction
-      .getByRole("button", { name: "Remove example", exact: true })
-      .isEnabled(),
+  assert.equal(
+    await demo.locator("img").count(),
+    0,
+    "Demo must not show an agent logo",
   );
-  await correction
-    .getByRole("tab", { name: "Mark outdated", exact: true })
-    .click();
-  assert.ok(
-    await correction
-      .getByRole("button", { name: "Mark example outdated", exact: true })
-      .isEnabled(),
+  assert.equal(await page.getByText(/river-app|One login problem/).count(), 0);
+  assert.match(
+    await page.locator(".memory-service img").last().getAttribute("src"),
+    /neo4j/,
+  );
+  assert.equal(
+    await page
+      .getByRole("link", { name: "Piyush Choudhari", exact: true })
+      .getAttribute("href"),
+    "https://piyushc.com",
   );
 
   const setup = page.locator(".setup-panel");
+  const agentSelect = setup.getByRole("combobox", {
+    name: "Choose your agent",
+  });
+  await agentSelect.click();
+  assert.equal(await page.getByRole("option").count(), 9);
+  assert.equal(await page.locator(".agent-menu img").count(), 7);
+  await page.getByRole("option", { name: "Server URL", exact: true }).click();
   const configs = [
-    ["MCP server URL", mcpServerUrl],
-    ["MCP client configuration", clientConfig],
-    ["Claude Code command", claudeCommand],
+    ["Server URL", "MCP server URL", mcpServerUrl],
+    ["Cursor", "Cursor configuration", clientConfig],
+    ["Claude Code", "Claude Code command", claudeCommand],
+    [
+      "Codex",
+      "Codex commands",
+      `codex mcp add mentis --url '${mcpServerUrl}'\ncodex mcp login mentis`,
+    ],
+    ["Amp", "Amp command", `amp mcp add mentis '${mcpServerUrl}'`],
+    [
+      "OpenCode",
+      "OpenCode configuration",
+      JSON.stringify(
+        { mcp: { mentis: { type: "remote", url: mcpServerUrl } } },
+        null,
+        2,
+      ),
+    ],
+    [
+      "OpenClaw",
+      "OpenClaw commands",
+      `openclaw mcp add mentis --url '${mcpServerUrl}' --transport streamable-http\nopenclaw mcp login mentis`,
+    ],
+    [
+      "Hermes Agent",
+      "Hermes configuration",
+      `mcp_servers:\n  mentis:\n    url: "${mcpServerUrl}"\n    auth: oauth`,
+    ],
+    [
+      "Pi",
+      "Pi commands",
+      `pi mcp add mentis --url '${mcpServerUrl}'\npi mcp login mentis`,
+    ],
   ];
-  for (const [label, code] of configs) {
+  for (const [agent, label, code] of configs) {
+    await agentSelect.click();
+    await page.getByRole("option", { name: agent, exact: true }).click();
+    assert.equal(await setup.locator("pre").count(), 1);
+    assert.ok(!(await setup.locator("pre").innerText()).includes("localhost"));
+    if (agent !== "Server URL" && agent !== "Cursor")
+      assert.equal(await agentSelect.locator("img").count(), 1);
+    assert.equal(
+      await agentSelect.evaluate((node) => getComputedStyle(node).outlineStyle),
+      "none",
+    );
     assert.equal(
       await setup.getByLabel(label, { exact: true }).innerText(),
       code,
     );
     await setup
-      .getByRole("button", { name: `Copy ${label}`, exact: true })
+      .getByRole("button", { name: `Copy ${code}`, exact: true })
       .click();
     assert.equal(
       await page.evaluate(() => navigator.clipboard.readText()),
@@ -205,21 +372,6 @@ async function checkPage(name, viewport) {
     [],
     "Remote setup must pass accessibility checks",
   );
-  if (name === "mobile") {
-    await page
-      .getByRole("button", { name: "Open navigation", exact: true })
-      .click();
-    const dialog = page.getByRole("dialog");
-    assert.ok(await dialog.isVisible());
-    await page.keyboard.press("Escape");
-    assert.ok(!(await dialog.isVisible()));
-    await page
-      .getByRole("button", { name: "Open navigation", exact: true })
-      .click();
-    await dialog.getByRole("link", { name: "Setup", exact: true }).click();
-    assert.ok(!(await dialog.isVisible()));
-    assert.equal(new URL(page.url()).hash, "#setup");
-  }
 
   for (const image of await page.locator("img").all())
     await image.scrollIntoViewIfNeeded();
@@ -261,10 +413,16 @@ async function checkPage(name, viewport) {
   );
   assert.equal(overflow, false, "Page must not overflow horizontally");
   await page.screenshot({ path: resolve(output, `${name}-top.png`) });
+  await page
+    .locator(".memory-map")
+    .screenshot({ path: resolve(output, `${name}-graph.png`) });
   await page.screenshot({
     path: resolve(output, `${name}.png`),
     fullPage: true,
   });
+  await agentSelect.click();
+  await page.screenshot({ path: resolve(output, `${name}-agents.png`) });
+  await page.getByRole("option", { name: "Server URL", exact: true }).click();
 
   await context.grantPermissions([]);
   await page.evaluate(() => {
@@ -278,11 +436,11 @@ async function checkPage(name, viewport) {
     });
   });
   await setup
-    .getByRole("button", { name: "Copy MCP server URL", exact: true })
+    .getByRole("button", { name: `Copy ${mcpServerUrl}`, exact: true })
     .click();
   assert.ok(
     await page
-      .getByText("Copy failed. Select the code and copy it manually.", {
+      .getByText("Copy failed. Select and copy the text.", {
         exact: true,
       })
       .isVisible(),
@@ -291,7 +449,7 @@ async function checkPage(name, viewport) {
     name,
     viewport,
     checks:
-      "tabs, keyboard, playback, corrections, copy and error, anchors, images, accessibility, overflow",
+      "tabs, keyboard, graph, logos, public URL, single action, copy and error, anchors, images, accessibility, overflow",
     violations: audit.violations.length,
     errors,
   });
@@ -307,15 +465,7 @@ try {
   });
   const page = await reduced.newPage();
   await page.goto(baseUrl, { waitUntil: "networkidle" });
-  assert.ok(
-    await page
-      .getByRole("button", {
-        name: "Playback disabled by reduced motion preference",
-        exact: true,
-      })
-      .isDisabled(),
-  );
-  for (const stage of ["Record", "Inspect", "Find"]) {
+  for (const stage of ["1 Record", "3 Inspect", "2 Find"]) {
     await page.getByRole("tab", { name: stage, exact: true }).click();
     assert.equal(
       await page.evaluate(
@@ -325,10 +475,9 @@ try {
       `320px ${stage} view must fit`,
     );
   }
-  await page.waitForTimeout(6200);
   assert.equal(
     await page
-      .getByRole("tab", { name: "Find", exact: true })
+      .getByRole("tab", { name: "2 Find", exact: true })
       .getAttribute("aria-selected"),
     "true",
   );
@@ -340,7 +489,7 @@ try {
   );
   assert.equal(
     await page
-      .locator(".demo-content[data-state='active']")
+      .locator(".demo-step-content[data-state='active']")
       .evaluate((node) => getComputedStyle(node).animationName),
     "none",
   );

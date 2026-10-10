@@ -1,18 +1,10 @@
 "use client";
 
-import {
-  ArrowLeft,
-  ArrowUpRight,
-  Check,
-  Copy,
-  FlaskConical,
-  ShieldCheck,
-} from "lucide-react";
+import { ArrowLeft, ArrowUpRight, Check, Copy } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { useAccountPreview } from "@/lib/account-preview";
 
 export function Brand() {
   return (
@@ -49,24 +41,6 @@ export function GoogleMark() {
         d="M24 11.2c3 0 5.6 1 7.7 3l5.8-5.8A19.4 19.4 0 0 0 24 3a20.4 20.4 0 0 0-18.3 11.3l6.9 5.3c1.6-4.8 6.1-8.4 11.4-8.4Z"
       />
     </svg>
-  );
-}
-
-export function PreviewNotice() {
-  const preview = useAccountPreview();
-  return (
-    <div className="preview-notice">
-      <FlaskConical size={15} aria-hidden="true" />
-      <span>
-        UI preview{" "}
-        <span className="preview-notice-detail">
-          · Example account and local actions
-        </span>
-      </span>
-      <Link href="/sign-in" onClick={preview.signOut}>
-        Exit preview <ArrowUpRight size={13} aria-hidden="true" />
-      </Link>
-    </div>
   );
 }
 
@@ -121,10 +95,6 @@ export function CopyButton({
 export function AccessFooter() {
   return (
     <footer className="access-footer">
-      <span>
-        <ShieldCheck size={15} aria-hidden="true" /> Your workspace. Your
-        access.
-      </span>
       <Link href="/">
         Back to Mentis <ArrowUpRight size={13} aria-hidden="true" />
       </Link>

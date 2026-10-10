@@ -79,7 +79,7 @@ const backend = createServer(async (request, response) => {
           ? [
               {
                 id: "consent_live",
-                name: "Live Agent",
+                name: "Codex",
                 description: "Registered client. Name is not verified.",
                 status: "active",
                 connected: new Date().toISOString(),
@@ -183,17 +183,18 @@ try {
     await page.goto(`${frontend}/sign-in`);
     await page.getByRole("button", { name: "Continue with Google" }).click();
     await page
-      .getByRole("heading", { name: "Your account", exact: true })
+      .getByRole("heading", { name: "Dashboard", exact: true })
       .waitFor();
+    assert.equal(new URL(page.url()).pathname, "/dashboard");
+    assert.equal(await page.title(), "Dashboard");
     assert.equal(
-      await page.locator(".profile-summary h2").innerText(),
-      "Live User",
+      await page.getByText("Account details", { exact: true }).count(),
+      0,
     );
     assert.equal(
-      await page.locator(".profile-summary p").innerText(),
-      "live@example.com",
+      await page.getByText("Your workspace", { exact: true }).count(),
+      0,
     );
-    assert.equal(await page.locator(".preview-notice").count(), 0);
     assert.equal(
       await page.evaluate(() => document.cookie.includes("mentis-session")),
       false,
@@ -203,7 +204,9 @@ try {
     );
     assert.ok(cookie.httpOnly && cookie.secure);
     await page.reload();
-    await page.getByText("live@example.com", { exact: true }).first().waitFor();
+    await page
+      .getByRole("heading", { name: "Dashboard", exact: true })
+      .waitFor();
     const navigate = async (label) => {
       if (name === "mobile") {
         await page
@@ -244,10 +247,40 @@ try {
     await audit("account");
     console.log(`${name}: sign-in and account reload passed`);
     await navigate("Connected clients");
-    await page
-      .getByRole("heading", { name: "Live Agent", exact: true })
-      .waitFor();
+    await page.getByRole("heading", { name: "Codex", exact: true }).waitFor();
+    assert.equal(await page.locator(".client-mark img").count(), 1);
+    assert.ok(
+      await page
+        .locator(".client-mark img")
+        .evaluate((image) => image.complete && image.naturalWidth > 0),
+    );
     await audit("connections");
+    await page
+      .getByRole("button", { name: "Connect a client", exact: true })
+      .click();
+    const setup = page.getByRole("dialog");
+    for (const agent of ["Server URL", "Cursor", "Claude Code", "Codex"]) {
+      await setup.getByRole("combobox", { name: "Choose your agent" }).click();
+      assert.equal(await page.getByRole("option").count(), 4);
+      await page.getByRole("option", { name: agent, exact: true }).click();
+      assert.equal(await setup.locator("pre").count(), 1);
+      assert.match(
+        await setup.locator("pre").innerText(),
+        agent === "Codex"
+          ? /codex mcp login mentis/
+          : agent === "Claude Code"
+            ? /claude mcp add/
+            : agent === "Cursor"
+              ? /mcpServers/
+              : /\/mcp$/,
+      );
+    }
+    assert.equal(
+      await setup.getByText("Preview consent", { exact: true }).count(),
+      0,
+    );
+    await audit("connect-client");
+    await page.getByRole("button", { name: "Close client setup" }).click();
     failDisconnect = true;
     await page.getByRole("button", { name: "Disconnect", exact: true }).click();
     const failedRequest = page.waitForResponse((response) =>
@@ -276,17 +309,17 @@ try {
     await page.getByRole("dialog").waitFor({ state: "hidden" });
     assert.equal(await page.locator(".connection-row").count(), 0);
     console.log(`${name}: disconnect failure and retry passed`);
-    await navigate("Security");
-    await page
-      .getByRole("button", { name: "Sign out of this browser" })
-      .click();
+    if (name === "mobile")
+      await page
+        .getByRole("button", { name: "Open account navigation" })
+        .click();
     const [logoutResponse] = await Promise.all([
       page.waitForResponse((response) =>
         response.url().endsWith("/api/auth/logout"),
       ),
       page
-        .getByRole("group", { name: "Confirm sign-out" })
         .getByRole("button", { name: "Sign out", exact: true })
+        .filter({ visible: true })
         .click(),
     ]);
     assert.equal(logoutResponse.status(), 204);
@@ -308,49 +341,25 @@ try {
   const page = await context.newPage();
   await page.goto(`${frontend}/sign-in`);
   await page.getByRole("button", { name: "Continue with Google" }).click();
-  await page
-    .getByRole("heading", { name: "Your account", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "Dashboard", exact: true }).waitFor();
   failAccount = true;
   await page.reload();
   await page.locator(".inline-alert").waitFor();
   assert.equal(await page.locator(".profile-summary").count(), 0);
   failAccount = false;
   await page.getByRole("button", { name: "Try again", exact: true }).click();
-  await page
-    .getByRole("heading", { name: "Your account", exact: true })
-    .waitFor();
-  await page.goto(`${frontend}/sign-in`);
-  await page.getByRole("button", { name: "Open workspace preview" }).click();
-  await page
-    .getByRole("heading", { name: "Your account", exact: true })
-    .waitFor();
+  await page.getByRole("heading", { name: "Dashboard", exact: true }).waitFor();
+  await page.goto(`${frontend}/authorize?preview=1&client=cursor`);
+  await page.waitForURL(`${frontend}/connections`);
   assert.equal(
-    await page.locator(".profile-summary h2").innerText(),
-    "Alex Morgan",
+    await page.getByText("Preview consent", { exact: true }).count(),
+    0,
   );
-  const beforePreview = mutations;
-  await page.goto(`${frontend}/connections`);
-  await page
-    .getByRole("button", { name: "Disconnect", exact: true })
-    .first()
-    .click();
-  await page
-    .getByRole("button", { name: "Disconnect client", exact: true })
-    .click();
-  await page.getByRole("dialog").waitFor({ state: "hidden" });
-  assert.equal(mutations, beforePreview, "Preview must not change live access");
-  await page.goto(`${frontend}/sign-in`);
-  await page.getByRole("button", { name: "Continue with Google" }).click();
-  await page
-    .getByRole("heading", { name: "Your account", exact: true })
-    .waitFor();
+  await page.goto(`${frontend}/account/security`);
   assert.equal(
-    await page.locator(".profile-summary h2").innerText(),
-    "Live User",
-    "Live sign-in must clear the saved preview",
+    (await page.request.get(`${frontend}/account/security`)).status(),
+    404,
   );
-  assert.equal(mutations, beforePreview);
   assert.deepEqual(failures, []);
   console.log(
     `Account browser checks passed (desktop and mobile). Screenshots: ${screenshots}`,

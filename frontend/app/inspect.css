@@ -1,0 +1,187 @@
+.demo-inspect {
+  grid-template-columns: minmax(170px, 0.65fr) minmax(0, 1.5fr);
+  gap: 28px;
+}
+.inspect-graph {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--surface);
+}
+.graph-toolbar,
+.graph-toolbar > span,
+.graph-toolbar > div {
+  display: flex;
+  align-items: center;
+}
+.graph-toolbar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.graph-toolbar > span {
+  gap: 8px;
+  font-weight: 600;
+}
+.graph-toolbar > div {
+  gap: 2px;
+}
+.graph-toolbar button {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: var(--foreground);
+  background: transparent;
+}
+.graph-toolbar button:hover {
+  background: var(--secondary);
+}
+.graph-toolbar button:disabled {
+  opacity: 0.35;
+}
+.graph-toolbar output {
+  min-width: 37px;
+  text-align: center;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.inspect-canvas {
+  display: block;
+  width: 100%;
+  max-height: 280px;
+  background: #f6f7f2;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  color: #6d7a67;
+}
+.inspect-canvas:active {
+  cursor: grabbing;
+}
+.inspect-edge {
+  cursor: pointer;
+}
+.edge-hit {
+  stroke: transparent;
+  stroke-width: 20;
+}
+.edge-line {
+  stroke: currentColor;
+  stroke-width: 1.4;
+}
+.inspect-edge rect {
+  fill: #f6f7f2;
+}
+.inspect-edge text {
+  fill: #4a5743;
+  font-size: 11px;
+}
+.inspect-edge[aria-pressed="true"] {
+  color: var(--green);
+}
+.inspect-edge[aria-pressed="true"] .edge-line {
+  stroke-width: 2.5;
+}
+.inspect-node {
+  cursor: grab;
+}
+.inspect-node circle {
+  fill: #e0e5dc;
+  stroke: #9aa996;
+  stroke-width: 1.5;
+}
+.inspect-node > svg {
+  color: #3c5032;
+  pointer-events: none;
+}
+.inspect-node[data-kind="task"] circle {
+  fill: #45603a;
+  stroke: #45603a;
+}
+.inspect-node[data-kind="task"] > svg {
+  color: #fff;
+}
+.inspect-node[data-kind="failed"] circle {
+  fill: #f8e4de;
+  stroke: #cb8d7c;
+}
+.inspect-node[data-kind="failed"] > svg {
+  color: #a13120;
+}
+.inspect-node[data-kind="passed"] circle {
+  fill: #d5e8d8;
+  stroke: #78a081;
+}
+.inspect-node[data-kind="passed"] > svg {
+  color: #215f35;
+}
+.inspect-node[aria-pressed="true"] circle {
+  stroke: #243a20;
+  stroke-width: 3;
+}
+.inspect-node text {
+  fill: #273923;
+  font-size: 14px;
+  font-weight: 550;
+  pointer-events: none;
+}
+.graph-hint {
+  padding: 0 14px 12px;
+  background: #f6f7f2;
+  color: var(--muted);
+  font-size: 11px;
+}
+.graph-properties {
+  height: 218px;
+  overflow-y: auto;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+.graph-selection-type {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.graph-properties h4 {
+  margin: 8px 0 12px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+.graph-properties dl {
+  margin: 0;
+}
+.graph-properties dl > div {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 12px;
+  padding-block: 5px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.graph-properties dt {
+  color: var(--muted);
+}
+.graph-properties dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 800px) {
+  .demo-inspect {
+    grid-template-columns: 1fr;
+  }
+  .graph-properties dl > div {
+    grid-template-columns: 70px minmax(0, 1fr);
+    gap: 8px;
+  }
+}

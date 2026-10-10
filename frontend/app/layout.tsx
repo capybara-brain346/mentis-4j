@@ -4,8 +4,10 @@ import "@fontsource-variable/manrope";
 import "@fontsource-variable/jetbrains-mono";
 import "./globals.css";
 import "./account.css";
+import "./memory.css";
+import "./graph.css";
+import "./inspect.css";
 import { AccountProvider } from "@/lib/account";
-import { AccountPreviewProvider } from "@/lib/account-preview";
 
 export const metadata: Metadata = {
   metadataBase: new URL(
@@ -35,9 +37,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <AccountPreviewProvider>
-          <AccountProvider>{children}</AccountProvider>
-        </AccountPreviewProvider>
+        <AccountProvider>{children}</AccountProvider>
       </body>
     </html>
   );

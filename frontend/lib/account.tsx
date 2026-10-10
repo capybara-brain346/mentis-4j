@@ -9,11 +9,14 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  type Connection,
-  previewAccount,
-  useAccountPreview,
-} from "@/lib/account-preview";
+export type Connection = {
+  id: string;
+  name: string;
+  description: string;
+  status: "active" | "expired" | "disconnected";
+  connected: string;
+  expires: string;
+};
 
 export type Account = {
   name: string;
@@ -26,7 +29,6 @@ export type Account = {
 type AccountContext = {
   ready: boolean;
   account: Account | null;
-  isPreview: boolean;
   connections: Connection[];
   error: string;
   busy: boolean;
@@ -37,7 +39,6 @@ type AccountContext = {
 const Context = createContext<AccountContext | null>(null);
 
 export function AccountProvider({ children }: { children: React.ReactNode }) {
-  const preview = useAccountPreview();
   const path = usePathname();
   const [account, setAccount] = useState<Account | null>(null);
   const [connections, setConnections] = useState<Connection[]>([]);
@@ -92,7 +93,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!/^\/(account|connections|sign-in)(\/|$)/.test(path)) return;
+    if (!/^\/(dashboard|connections|sign-in)(\/|$)/.test(path)) return;
     const controller = new AbortController();
     void load(controller.signal);
     const onFocus = () => {
@@ -139,7 +140,6 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       if (action === "logout") {
         setAccount(null);
         setConnections([]);
-        preview.signOut();
       } else
         setConnections((rows) => rows.filter((client) => client.id !== id));
     } catch (failure) {
@@ -158,25 +158,14 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   return (
     <Context.Provider
       value={{
-        ready: preview.ready && (preview.enabled || ready),
-        account: preview.enabled ? previewAccount : account,
-        isPreview: preview.enabled,
-        connections: preview.enabled ? preview.connections : connections,
-        error: preview.enabled ? "" : error,
+        ready,
+        account,
+        connections,
+        error,
         busy,
         refresh: () => load(),
-        signOut: async () => {
-          if (!preview.enabled && account) await mutate("logout");
-          else preview.signOut();
-        },
-        disconnect: async (id) => {
-          if (!preview.enabled && account) await mutate("disconnect", id);
-          else if (
-            preview.enabled &&
-            (id === "cursor" || id === "claude" || id === "codex")
-          )
-            preview.disconnect(id);
-        },
+        signOut: () => mutate("logout"),
+        disconnect: (id) => mutate("disconnect", id),
       }}
     >
       {children}

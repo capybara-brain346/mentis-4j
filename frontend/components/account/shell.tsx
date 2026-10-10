@@ -2,18 +2,15 @@
 
 import {
   ArrowRight,
-  ArrowUpRight,
-  BookOpen,
   Cable,
-  FlaskConical,
+  LayoutDashboard,
   LockKeyhole,
   LogOut,
   PanelLeft,
-  UserRound,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Brand, PreviewNotice } from "@/components/account/shared";
+import { Brand } from "@/components/account/shared";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -25,12 +22,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { accountInitials, useAccount } from "@/lib/account";
-import { useAccountPreview } from "@/lib/account-preview";
 
 const links = [
-  { href: "/account", title: "Account", icon: UserRound },
+  { href: "/dashboard", title: "Dashboard", icon: LayoutDashboard },
   { href: "/connections", title: "Connected clients", icon: Cable },
-  { href: "/account/security", title: "Security", icon: LockKeyhole },
 ];
 
 function AccountNav({ mobile = false }: { mobile?: boolean }) {
@@ -64,7 +59,6 @@ function AccountNav({ mobile = false }: { mobile?: boolean }) {
 }
 
 export function AccountShell({ children }: { children: React.ReactNode }) {
-  const preview = useAccountPreview();
   const session = useAccount();
   const account = session.account;
   const router = useRouter();
@@ -96,8 +90,8 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
         <Brand />
         <main>
           <LockKeyhole size={28} aria-hidden="true" />
-          <h1>Your workspace starts here.</h1>
-          <p>Sign in to view your account and connected clients.</p>
+          <h1>Sign in to Mentis.</h1>
+          <p>Sign in to view your dashboard and connected clients.</p>
           {session.error && (
             <div className="inline-alert" role="alert">
               {session.error}
@@ -111,13 +105,6 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
               Go to sign-in <ArrowRight aria-hidden="true" />
             </Link>
           </Button>
-          <Button
-            variant="secondary"
-            className="account-button"
-            onClick={preview.start}
-          >
-            <FlaskConical aria-hidden="true" /> Open workspace preview
-          </Button>
         </main>
       </div>
     );
@@ -128,41 +115,21 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
       </a>
       <aside className="console-sidebar">
         <Brand />
-        <div className="workspace-switch">
-          <span className="workspace-avatar">
-            {accountInitials(account.name)}
-          </span>
-          <div>
-            <strong>Personal workspace</strong>
-            <span>
-              {session.isPreview
-                ? "Private · Example account"
-                : "Private · Google account"}
-            </span>
-          </div>
-        </div>
         <AccountNav />
         <div className="sidebar-bottom">
-          <Link href="/#setup">
-            <BookOpen size={17} aria-hidden="true" /> Setup guide{" "}
-            <ArrowUpRight size={13} aria-hidden="true" />
-          </Link>
           <div className="sidebar-identity">
             <span className="account-avatar">
               {accountInitials(account.name)}
             </span>
             <div>
               <strong>{account.name}</strong>
-              <span>Google account</span>
             </div>
             <Button
               variant="ghost"
               size="icon"
               onClick={signOut}
               disabled={session.busy}
-              aria-label={
-                session.isPreview ? "Sign out of preview" : "Sign out"
-              }
+              aria-label="Sign out"
             >
               <LogOut size={17} aria-hidden="true" />
             </Button>
@@ -190,29 +157,23 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
               className="account-ui account-mobile-sheet"
             >
               <SheetHeader>
-                <SheetTitle>Mentis account</SheetTitle>
+                <SheetTitle>Dashboard</SheetTitle>
                 <SheetDescription>
-                  Personal workspace{session.isPreview ? " · UI preview" : ""}
+                  Dashboard and connected clients
                 </SheetDescription>
               </SheetHeader>
               <AccountNav mobile />
               <Button variant="ghost" onClick={signOut} disabled={session.busy}>
-                <LogOut aria-hidden="true" />{" "}
-                {session.isPreview ? "Sign out of preview" : "Sign out"}
+                <LogOut aria-hidden="true" /> Sign out
               </Button>
             </SheetContent>
           </Sheet>
           <div className="console-breadcrumb">
-            Personal workspace <span>/</span>
             <strong>
-              {links.find((link) => link.href === path)?.title ?? "Account"}
+              {links.find((link) => link.href === path)?.title ?? "Dashboard"}
             </strong>
           </div>
-          <span className="private-label">
-            <LockKeyhole size={13} aria-hidden="true" /> Private workspace
-          </span>
         </header>
-        {session.isPreview && <PreviewNotice />}
         {session.error && (
           <div className="inline-alert" role="alert">
             {session.error}
@@ -221,12 +182,6 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
         <main id="main-content" className="console-main">
           {children}
         </main>
-        <footer className="console-footer">
-          <span>Memory for your coding agent.</span>
-          <Link href="/">
-            mentis <ArrowUpRight size={12} aria-hidden="true" />
-          </Link>
-        </footer>
       </div>
     </div>
   );
