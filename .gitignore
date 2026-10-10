@@ -69,7 +69,9 @@ web_modules/
 .env
 .env.*
 !.env.example
+!.env.*.example
 .dev.vars
+.dev.vars.*
 .wrangler/
 
 # parcel-bundler cache (https://parceljs.org/)
@@ -78,6 +80,7 @@ web_modules/
 
 # Next.js build output
 .next
+.vinext/
 out
 
 # Nuxt.js build / generate output
@@ -144,8 +147,9 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
 
-# Plan files
+# Doc files
 docs/planning/
+docs/experiments/
 
 # Impeccable
 .impeccable/

@@ -24,7 +24,7 @@ Mentis connects tasks to attempt evidence in a repository graph. Agents can find
 
 ## Operating Context
 
-A trusted coding agent calls the MCP server. Neo4j stores the graph. OpenRouter provides embeddings and relevance scores. The local server uses stdio. An optional Worker provides HTTP access.
+A trusted coding agent calls the authenticated MCP endpoint on the Cloudflare Worker. Neo4j stores the graph. OpenRouter provides embeddings and relevance scores.
 
 ## Capabilities and Constraints
 

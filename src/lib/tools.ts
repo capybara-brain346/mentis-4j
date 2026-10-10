@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { CONFIG } from "../config/config.js";
-import { logger } from "./logger.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { CONFIG } from "../config/config.js";
 import type { MemoryGraph } from "./graph.js";
+import { logger } from "./logger.js";
 
 const text = z.string().trim().min(1);
 const files = z.array(text).min(1);
@@ -68,13 +68,17 @@ export function registerTools(server: McpServer, graph: MemoryGraph): void {
     "recall",
     {
       description:
-        "Run agent-authored Cypher in a bounded Neo4j read transaction. Results are limited by rows, bytes, and time. This trusted-local tool is not a complete read-only security boundary; do not expose it to untrusted agents.",
+        "Read the ordered attempt history for one task in the current workspace. The server uses a fixed read query and returns at most the requested number of attempts.",
       inputSchema: z
         .object({
-          cypher: text
-            .max(CONFIG.recall.maxCypherLength)
-            .describe("Cypher query to run against memory"),
-          parameters: z.record(z.string(), z.unknown()).default({}),
+          repository: text,
+          taskId: text,
+          limit: z
+            .number()
+            .int()
+            .min(1)
+            .max(CONFIG.neo4j.maxReadRows)
+            .default(CONFIG.neo4j.maxReadRows),
         })
         .strict(),
     },
@@ -85,10 +89,11 @@ export function registerTools(server: McpServer, graph: MemoryGraph): void {
       try {
         const result = await graph.recall(input, requestId);
         logger.info(
-          `recall completed: ${result.rows.length} rows in ${Date.now() - started}ms`,
+          `recall completed: ${result.attempts.length} attempts in ${Date.now() - started}ms`,
           requestId,
         );
         return {
+          structuredContent: { status: "ok", ...result },
           content: [{ type: "text" as const, text: JSON.stringify(result) }],
         };
       } catch (error) {

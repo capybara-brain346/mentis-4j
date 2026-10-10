@@ -1,6 +1,6 @@
 # MENTIS: context for coding agents
 
-MENTIS (`mentis-4j`) is a local stdio MCP server for retaining **coding attempts**, not a code editor or an autonomous agent. It stores what an agent tried, what it observed, and what it inferred in Neo4j so a later agent can find related work and inspect the evidence before repeating a fix. This file is a handoff for agents working in other repositories; it describes the current implementation, not a roadmap.
+MENTIS (`mentis-4j`) provides an authenticated Worker MCP endpoint for retaining **coding attempts**, not a code editor or an autonomous agent. It stores what an agent tried, what it observed, and what it inferred in Neo4j so a later agent can find related work and inspect the evidence before repeating a fix. This file is a handoff for agents working in other repositories; it describes the current implementation, not a roadmap.
 
 ## Mental model
 
@@ -14,10 +14,10 @@ Request path: MCP tool validation (`src/tools.ts`) → graph operations (`src/gr
 
 ## Run locally
 
-Clone `https://github.com/capybara-brain346/mentis-4j.git` if you do not have the repository. From its root (Node.js with `process.loadEnvFile` support, npm, and Docker required):
+Clone `https://github.com/capybara-brain346/mentis-4j.git` if you do not have the repository. From its root (Node.js, npm, and Docker required):
 
 1. `npm ci && npm run build`
-2. Set `NEO4J_PASSWORD` and `OPENROUTER_API_KEY` in the shell or a root `.env` file (see `.env.example`). Keep `.env` out of Git. Neo4j defaults to user/database `neo4j` and URI `bolt://127.0.0.1:7687`; set `NEO4J_USERNAME` for cloud credentials with a different username.
+2. Copy `.env.development.example` to `.env.development` and set `NEO4J_PASSWORD`, `OPENROUTER_API_KEY`, and the Google OAuth values. Keep the file out of Git. Neo4j defaults to user/database `neo4j` and URI `bolt://127.0.0.1:7687`; set `NEO4J_USERNAME` for cloud credentials with a different username.
 3. `docker compose up -d` (the password must be available to Compose). Existing Neo4j volumes retain their original password; changing the variable does not rotate it.
 4. In Neo4j Browser at `http://127.0.0.1:7474`, run:
 
@@ -32,24 +32,7 @@ Clone `https://github.com/capybara-brain346/mentis-4j.git` if you do not have th
 
    Check `SHOW VECTOR INDEXES` and wait for `attempt_embedding` to be `ONLINE`. The index is required for `search`, not `recall` or `record_attempt`.
 
-5. Configure an MCP client with a **stdio** server (not an HTTP URL), using an absolute path to the built entry point. For clients accepting this common JSON shape:
-
-   ```json
-   {
-     "mcpServers": {
-       "mentis": {
-         "command": "node",
-         "args": ["/absolute/path/to/mentis-4j/dist/server.js"],
-         "env": {
-           "NEO4J_PASSWORD": "your-local-password",
-           "OPENROUTER_API_KEY": "your-openrouter-key"
-         }
-       }
-     }
-   }
-   ```
-
-   Adapt the wrapper to your client's configuration format. Prefer its secret/environment facility instead of committing credentials in JSON. If relying on `.env` instead of `env`, launch from the MENTIS root: the server reads `.env` in its *working directory*, not beside `dist/server.js`. The server verifies Neo4j connectivity on startup; stderr carries diagnostics and stdout is reserved for MCP.
+5. Follow [the deployment guide](modules/deployment.md) to start the local Worker and configure OAuth. Set your MCP client to the Worker URL ending in `/mcp` and complete its OAuth sign-in.
 
 ## Try the tools
 

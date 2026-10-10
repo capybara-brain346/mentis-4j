@@ -1,0 +1,39 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mentis-frontend",
+  "account_id": "32f2a5e2a676ee905a3828b2b38b0150",
+  "main": "vinext/server/app-router-entry",
+  "compatibility_date": "2026-10-08",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "routes": [{ "pattern": "men-tis.xyz", "custom_domain": true }],
+  "assets": {
+    "not_found_handling": "none"
+  },
+  "vars": {
+    "MENTIS_BACKEND_URL": "https://mcp.men-tis.xyz",
+    "FRONTEND_BASE_URL": "https://men-tis.xyz"
+  },
+  "env": {
+    "development": {
+      "routes": [],
+      "vars": {
+        "MENTIS_BACKEND_URL": "http://localhost:8787",
+        "FRONTEND_BASE_URL": "http://localhost:6969"
+      }
+    }
+  },
+  "observability": {
+    "enabled": true,
+    "redact_query_string": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 1
+    },
+    "traces": {
+      "enabled": true,
+      "head_sampling_rate": 0.01
+    }
+  }
+}

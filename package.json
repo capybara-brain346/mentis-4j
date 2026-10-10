@@ -6,28 +6,32 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "eslint --ext .ts src",
-    "format": "prettier --check 'src/**/*.ts' 'tests/**/*.js' package.json .eslintrc.json wrangler.jsonc",
+    "lint": "biome lint .",
+    "format": "biome format .",
+    "format:write": "biome format --write .",
+    "check": "biome check .",
+    "fix": "biome check --write .",
     "test": "npm run build && node --test tests/*.test.js",
-    "start": "node dist/process/server.js",
+    "dev": "npm run worker:dev",
+    "frontend:dev": "npm --prefix frontend run dev:cloudflare",
+    "db:dev": "docker compose --project-name mentis-dev --env-file .env.development up -d",
+    "worker:db:dev": "wrangler d1 migrations apply mentis-auth --local --env-file .env.development",
     "worker:build": "wrangler deploy --dry-run",
-    "worker:dev": "wrangler dev",
+    "worker:dev": "wrangler dev --local --env-file .env.development --ip 127.0.0.1 --port 8787 --local-upstream localhost:8787 --upstream-protocol http",
     "worker:deploy": "wrangler deploy",
     "prepare": "husky"
   },
   "dependencies": {
-    "@cloudflare/workers-oauth-provider": "^1.0.0",
+    "@cloudflare/workers-oauth-provider": "^1.2.3",
     "@modelcontextprotocol/sdk": "^1.30.0",
     "neo4j-driver": "^6.2.0",
+    "openid-client": "^6.8.8",
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@types/node": "^22.20.4",
-    "@typescript-eslint/eslint-plugin": "^8.70.1",
-    "@typescript-eslint/parser": "^8.70.1",
-    "eslint": "^8.57.1",
     "husky": "^9.1.7",
-    "prettier": "^3.9.9",
     "typescript": "^5.9.3",
     "wrangler": "^4.141.0"
   }

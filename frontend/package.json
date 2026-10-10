@@ -1,0 +1,51 @@
+{
+  "name": "@mentis/landing",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --hostname localhost --port 6969",
+    "build": "next build",
+    "dev:cloudflare": "CLOUDFLARE_ENV=development vite --host localhost --port 6969 --strictPort",
+    "build:cloudflare": "npm run build && vite build && cp .next/server/app/opengraph-image.body dist/client/opengraph-image",
+    "deploy": "npm run build:cloudflare && wrangler deploy",
+    "preview": "next start --hostname 127.0.0.1 --port 3000",
+    "typecheck": "next typegen && tsc --noEmit",
+    "lint": "biome lint .",
+    "format": "biome format .",
+    "format:write": "biome format --write .",
+    "check": "biome check .",
+    "fix": "biome check --write .",
+    "check:browser": "node tests/browser.mjs",
+    "check:access": "node tests/access.mjs",
+    "test:auth": "node --test tests/auth-proxy.test.mjs",
+    "check:account": "npm run build && node tests/account.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/jetbrains-mono": "^5.2.0",
+    "@fontsource-variable/manrope": "^5.2.0",
+    "class-variance-authority": "^0.7.1",
+    "cn": "^0.4.0",
+    "lucide-react": "^1.52.0",
+    "next": "^16.0.0",
+    "radix-ui": "^1.7.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@biomejs/biome": "2.5.15",
+    "@cloudflare/vite-plugin": "^1.63.0",
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-rsc": "^0.5.36",
+    "playwright": "^1.63.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.9.0",
+    "vinext": "^1.0.1",
+    "vite": "^8.3.4",
+    "wrangler": "^4.148.0"
+  }
+}

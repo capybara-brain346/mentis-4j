@@ -111,7 +111,7 @@ A light field holds compact text, rounded actions, and large painted scenes. Gra
 
 Quiet product windows sit over mineral green and amber paintings. The window content stays readable. Manrope sets interface text. JetBrains Mono identifies code and tool names.
 
-The user selected Cursor as the visual reference. This system records the built Mentis page. The source is `apps/landing/app/globals.css` and its page components.
+The user selected Cursor as the visual reference. This system records the built Mentis page. The source is `frontend/app/globals.css` and its page components.
 
 **Key Characteristics:**
 
