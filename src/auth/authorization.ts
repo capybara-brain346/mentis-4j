@@ -265,31 +265,66 @@ async function completeMcpAuthorization(
 ): Promise<Response> {
   const resource = authRequest.resource ?? mcpResource(env);
   const scope = authRequest.scope;
+  const isUrlMetadataClient = isUrlMetadataClientId(authRequest.clientId);
+  const oldConsentIds = (await store.listActiveConsents(session.userId))
+    .filter(
+      (consent) =>
+        consent.clientId === authRequest.clientId &&
+        consent.resource === resource &&
+        (!isUrlMetadataClient ||
+          consent.redirectUri === authRequest.redirectUri),
+    )
+    .map((consent) => consent.id);
   const consentId = await store.createConsent({
     userId: session.userId,
     clientId: authRequest.clientId,
     workspaceId: session.workspaceId,
     resource,
+    redirectUri: authRequest.redirectUri,
     scope: JSON.stringify(scope),
     consentVersion: CONFIG.oauth.consentVersion,
     expiresAt: new Date(
       Date.now() + CONFIG.oauth.pendingTransactionTtlSeconds * 1000,
     ).toISOString(),
   });
-  const authorization = await oauth.completeAuthorization({
-    request: authRequest,
-    userId: session.userId,
-    metadata: {},
-    scope,
-    props: {
+  let authorization: { redirectTo: string };
+  try {
+    authorization = await oauth.completeAuthorization({
+      request: authRequest,
       userId: session.userId,
-      workspaceId: session.workspaceId,
-      consentId,
-      resource,
+      metadata: {},
       scope,
-    } satisfies McpAuthorizationProps,
-  });
+      props: {
+        userId: session.userId,
+        workspaceId: session.workspaceId,
+        consentId,
+        resource,
+        scope,
+      } satisfies McpAuthorizationProps,
+    });
+  } catch (error) {
+    await store.revokeConsent(session.userId, consentId);
+    throw error;
+  }
+  await Promise.all(
+    oldConsentIds.map((oldConsentId) =>
+      store.revokeConsent(session.userId, oldConsentId),
+    ),
+  );
   headers.set("Location", authorization.redirectTo);
   headers.set("Cache-Control", "no-store");
   return new Response(null, { status: 302, headers });
+}
+
+function isUrlMetadataClientId(clientId: string): boolean {
+  // The provider uses this URL shape to select Client ID Metadata Documents.
+  const schemeEnd = clientId.indexOf("://");
+  if (schemeEnd === -1) return false;
+  const authorityStart = schemeEnd + 3;
+  const pathOffset = clientId.slice(authorityStart).search(/[/?#]/);
+  return (
+    new URL(clientId).protocol === "https:" &&
+    pathOffset !== -1 &&
+    clientId[authorityStart + pathOffset] === "/"
+  );
 }

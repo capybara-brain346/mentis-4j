@@ -43,9 +43,7 @@ export async function handleConnectionsApiGet(
   const connections = await Promise.all(
     [...newest.values()].map(async (consent) => ({
       id: consent.id,
-      name:
-        (await oauth.lookupClient(consent.clientId))?.clientName ??
-        consent.clientId,
+      name: await displayClientName(oauth, consent.clientId),
       description: "Registered client. Name is not verified.",
       status: "active",
       connected: consent.createdAt,
@@ -110,14 +108,24 @@ async function connectionsPage(
   }
   const rows = await Promise.all(
     [...newestByClient.values()].map(async (consent) => {
-      const client = await oauth.lookupClient(consent.clientId);
-      const name = client?.clientName ?? consent.clientId;
+      const name = await displayClientName(oauth, consent.clientId);
       return `<li>${escapeHtml(name)} <form method="post" action="/connections/disconnect"><input type="hidden" name="consentId" value="${escapeHtml(consent.id)}"><button type="submit">Disconnect</button></form></li>`;
     }),
   );
   return htmlPage(
     `<!doctype html><html lang="en"><meta charset="utf-8"><title>Connected clients</title><h1>Connected clients</h1><ul>${rows.join("")}</ul><form method="post" action="/logout"><button type="submit">Log out</button></form></html>`,
   );
+}
+
+async function displayClientName(
+  oauth: OAuthHelpers,
+  clientId: string,
+): Promise<string> {
+  try {
+    return (await oauth.lookupClient(clientId))?.clientName ?? clientId;
+  } catch {
+    return clientId;
+  }
 }
 
 async function disconnectClient(

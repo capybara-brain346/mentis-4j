@@ -36,6 +36,7 @@ export const D1_SCHEMA_STATEMENTS = [
     client_id TEXT NOT NULL,
     workspace_id TEXT NOT NULL,
     resource TEXT NOT NULL,
+    redirect_uri TEXT,
     scope TEXT NOT NULL,
     consent_version TEXT NOT NULL,
     expires_at TEXT NOT NULL,

@@ -223,6 +223,7 @@ export class D1Store {
     clientId: string;
     workspaceId: string;
     resource: string;
+    redirectUri: string;
     scope: string;
     consentVersion: string;
     expiresAt: string;
@@ -232,6 +233,7 @@ export class D1Store {
       "clientId",
       "workspaceId",
       "resource",
+      "redirectUri",
       "scope",
       "consentVersion",
     ] as const) {
@@ -249,6 +251,7 @@ export class D1Store {
           input.clientId,
           input.workspaceId,
           input.resource,
+          input.redirectUri,
           input.scope,
           input.consentVersion,
           expiresAt,

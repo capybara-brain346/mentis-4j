@@ -529,6 +529,7 @@ test("D1 auth records enforce session and consent policy", async () => {
       clientId: "test-client",
       workspaceId: account.workspace.id,
       resource,
+      redirectUri: "https://client.example/callback",
       scope,
       consentVersion: "1",
       expiresAt: new Date(Date.now() + 60_000).toISOString(),

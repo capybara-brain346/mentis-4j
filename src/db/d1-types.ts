@@ -76,6 +76,7 @@ export interface OAuthConsentRecord {
   id: string;
   clientId: string;
   resource: string;
+  redirectUri: string | null;
   scope: string;
   expiresAt: string;
   createdAt: string;

@@ -98,9 +98,9 @@ export const revokeBrowserSession = String.raw`
 
 export const createConsent = String.raw`
           INSERT INTO oauth_consents
-            (id, user_id, client_id, workspace_id, resource, scope,
+            (id, user_id, client_id, workspace_id, resource, redirect_uri, scope,
              consent_version, expires_at, revoked_at, created_at)
-          SELECT ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?
+          SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?
           WHERE EXISTS (
             SELECT 1
             FROM users u
@@ -137,14 +137,16 @@ export const setConsentExpiry = String.raw`
       `;
 
 export const getConsentForUser = String.raw`
-          SELECT id, client_id AS clientId, resource, scope,
+          SELECT id, client_id AS clientId, resource,
+                 redirect_uri AS redirectUri, scope,
                  expires_at AS expiresAt, created_at AS createdAt
           FROM oauth_consents
           WHERE id = ? AND user_id = ? AND revoked_at IS NULL
         `;
 
 export const listActiveConsents = String.raw`
-          SELECT id, client_id AS clientId, resource, scope,
+          SELECT id, client_id AS clientId, resource,
+                 redirect_uri AS redirectUri, scope,
                  expires_at AS expiresAt, created_at AS createdAt
           FROM oauth_consents
           WHERE user_id = ?
