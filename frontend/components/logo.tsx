@@ -2,6 +2,7 @@ import Image from "next/image";
 import amp from "@/assets/icons/amp-color.svg";
 import claude from "@/assets/icons/claude-color.svg";
 import codex from "@/assets/icons/codex.svg";
+import cursor from "@/assets/icons/cursor.png";
 import hermes from "@/assets/icons/hermes-agent.svg";
 import neo4j from "@/assets/icons/neo4j.png";
 import openai from "@/assets/icons/openai.svg";
@@ -13,6 +14,7 @@ const logos = {
   amp,
   claude,
   codex,
+  cursor,
   hermes,
   neo4j,
   openai,

@@ -57,6 +57,9 @@ try {
         body: '{"error":"Sign-in required"}',
       }),
     );
+    await page.goto(`${baseURL}/connections`);
+    await page.waitForURL(`${baseURL}/dashboard`);
+    await page.getByRole("link", { name: "Go to sign-in" }).waitFor();
     await page.goto(`${baseURL}/account`);
     await page.waitForURL(`${baseURL}/dashboard`);
     await page.getByRole("link", { name: "Go to sign-in" }).waitFor();
@@ -84,7 +87,7 @@ try {
     await page.locator(".inline-alert").waitFor();
     await audit(page, `${name}-sign-in-error`);
     await page.goto(`${baseURL}/authorize?preview=1&client=cursor`);
-    await page.waitForURL(`${baseURL}/connections`);
+    await page.waitForURL(`${baseURL}/dashboard`);
     assert.equal(
       await page.getByText("UI preview", { exact: true }).count(),
       0,

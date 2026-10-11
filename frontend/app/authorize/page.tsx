@@ -26,5 +26,5 @@ export default async function AuthorizePage({
     }
     redirect(`${backendOrigin()}/authorize?${query}`);
   }
-  redirect("/connections");
+  redirect("/dashboard");
 }

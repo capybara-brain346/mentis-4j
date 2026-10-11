@@ -1,68 +1,16 @@
 "use client";
 
-import {
-  ArrowRight,
-  Cable,
-  LayoutDashboard,
-  LockKeyhole,
-  LogOut,
-  PanelLeft,
-} from "lucide-react";
+import { ArrowRight, LockKeyhole, LogOut } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Brand } from "@/components/account/shared";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { accountInitials, useAccount } from "@/lib/account";
-
-const links = [
-  { href: "/dashboard", title: "Dashboard", icon: LayoutDashboard },
-  { href: "/connections", title: "Connected clients", icon: Cable },
-];
-
-function AccountNav({ mobile = false }: { mobile?: boolean }) {
-  const path = usePathname();
-  return (
-    <nav
-      className="account-nav"
-      aria-label={mobile ? "Mobile account navigation" : "Account navigation"}
-    >
-      {links.map(({ href, title, icon: Icon }) => {
-        const link = (
-          <Link
-            key={href}
-            href={href}
-            aria-current={path === href ? "page" : undefined}
-          >
-            <Icon size={18} aria-hidden="true" />
-            {title}
-          </Link>
-        );
-        return mobile ? (
-          <SheetClose key={href} asChild>
-            {link}
-          </SheetClose>
-        ) : (
-          link
-        );
-      })}
-    </nav>
-  );
-}
+import { useAccount } from "@/lib/account";
 
 export function AccountShell({ children }: { children: React.ReactNode }) {
   const session = useAccount();
   const account = session.account;
   const router = useRouter();
-  const path = usePathname();
   async function signOut() {
     try {
       await session.signOut();
@@ -91,7 +39,7 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
         <main>
           <LockKeyhole size={28} aria-hidden="true" />
           <h1>Sign in to Mentis.</h1>
-          <p>Sign in to view your dashboard and connected clients.</p>
+          <p>Sign in to view your connected clients.</p>
           {session.error && (
             <div className="inline-alert" role="alert">
               {session.error}
@@ -113,67 +61,21 @@ export function AccountShell({ children }: { children: React.ReactNode }) {
       <a href="#main-content" className="account-skip">
         Skip to content
       </a>
-      <aside className="console-sidebar">
+      <header className="console-topbar">
         <Brand />
-        <AccountNav />
-        <div className="sidebar-bottom">
-          <div className="sidebar-identity">
-            <span className="account-avatar">
-              {accountInitials(account.name)}
-            </span>
-            <div>
-              <strong>{account.name}</strong>
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={signOut}
-              disabled={session.busy}
-              aria-label="Sign out"
-            >
-              <LogOut size={17} aria-hidden="true" />
-            </Button>
-          </div>
+        <div className="console-identity">
+          <span>{account.name}</span>
+          <Button
+            variant="ghost"
+            className="account-button"
+            onClick={signOut}
+            disabled={session.busy}
+          >
+            <LogOut size={17} aria-hidden="true" /> Sign out
+          </Button>
         </div>
-      </aside>
+      </header>
       <div className="console-body">
-        <header className="console-topbar">
-          <div className="console-mobile-brand">
-            <Brand />
-          </div>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="console-mobile-menu"
-                aria-label="Open account navigation"
-              >
-                <PanelLeft aria-hidden="true" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent
-              side="left"
-              className="account-ui account-mobile-sheet"
-            >
-              <SheetHeader>
-                <SheetTitle>Dashboard</SheetTitle>
-                <SheetDescription>
-                  Dashboard and connected clients
-                </SheetDescription>
-              </SheetHeader>
-              <AccountNav mobile />
-              <Button variant="ghost" onClick={signOut} disabled={session.busy}>
-                <LogOut aria-hidden="true" /> Sign out
-              </Button>
-            </SheetContent>
-          </Sheet>
-          <div className="console-breadcrumb">
-            <strong>
-              {links.find((link) => link.href === path)?.title ?? "Dashboard"}
-            </strong>
-          </div>
-        </header>
         {session.error && (
           <div className="inline-alert" role="alert">
             {session.error}

@@ -297,7 +297,7 @@ async function checkPage(name, viewport) {
   });
   await agentSelect.click();
   assert.equal(await page.getByRole("option").count(), 9);
-  assert.equal(await page.locator(".agent-menu img").count(), 7);
+  assert.equal(await page.locator(".agent-menu img").count(), 8);
   await page.getByRole("option", { name: "Server URL", exact: true }).click();
   const configs = [
     ["Server URL", "MCP server URL", mcpServerUrl],
@@ -339,7 +339,7 @@ async function checkPage(name, viewport) {
     await page.getByRole("option", { name: agent, exact: true }).click();
     assert.equal(await setup.locator("pre").count(), 1);
     assert.ok(!(await setup.locator("pre").innerText()).includes("localhost"));
-    if (agent !== "Server URL" && agent !== "Cursor")
+    if (agent !== "Server URL")
       assert.equal(await agentSelect.locator("img").count(), 1);
     assert.equal(
       await agentSelect.evaluate((node) => getComputedStyle(node).outlineStyle),

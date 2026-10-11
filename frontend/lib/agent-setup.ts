@@ -12,7 +12,7 @@ export const agentSetups = {
   },
   cursor: {
     name: "Cursor",
-    logo: null,
+    logo: "cursor",
     label: "Cursor configuration",
     instructions:
       "Add this to .cursor/mcp.json in your project, or to ~/.cursor/mcp.json for all projects. Then connect Mentis in Cursor’s MCP settings.",

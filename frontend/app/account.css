@@ -211,126 +211,52 @@
   font-weight: 650;
 }
 .console-layout {
-  display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  min-height: 100svh;
-}
-.console-sidebar {
-  position: sticky;
-  top: 0;
-  height: 100svh;
-  padding: 28px 18px 18px;
   display: flex;
   flex-direction: column;
-  background: var(--secondary);
-  border-right: 1px solid var(--border);
+  min-height: 100svh;
 }
-.console-sidebar > .wordmark {
-  padding-inline: 14px;
-}
-.account-nav {
-  display: grid;
-  gap: 5px;
-  margin-top: 18px;
-}
-.account-nav > a {
+.console-topbar {
+  width: min(100%, 1100px);
+  margin-inline: auto;
+  min-height: 88px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  height: 43px;
-  padding: 0 13px;
-  color: var(--muted);
-  border-radius: 7px;
-  font-size: 12px;
-  font-weight: 550;
+  justify-content: space-between;
+  gap: 20px;
+  padding-inline: 32px;
+  border-bottom: 1px solid var(--border);
 }
-.account-nav > a:hover {
-  background: color-mix(in oklab, var(--surface) 60%, transparent);
-  color: var(--foreground);
-}
-.account-nav > a[aria-current="page"] {
-  background: var(--surface);
-  color: var(--green);
-}
-.sidebar-bottom {
-  margin-top: auto;
-}
-.sidebar-bottom > a {
+.console-identity {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 16px;
+  min-width: 0;
+}
+.console-identity > span {
+  max-width: 30ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 12px;
   color: var(--muted);
-  padding: 18px 12px;
 }
-.sidebar-bottom > a > svg:last-child {
-  margin-left: auto;
-}
-.sidebar-identity {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  padding: 16px 0 0 6px;
-  border-top: 1px solid var(--border);
-}
-.account-avatar {
-  width: 31px;
-  height: 31px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: #d8e2d4;
-  color: #34523d;
+.console-identity > button {
   flex-shrink: 0;
-  font-size: 11px;
-  font-weight: 650;
-}
-.sidebar-identity strong {
-  display: block;
-  font-size: 11px;
-}
-.sidebar-identity div > span {
-  display: block;
-  font-size: 10px;
-  color: var(--muted);
-}
-.sidebar-identity > button {
-  margin-left: auto;
 }
 .console-body {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex: 1;
 }
-.console-topbar {
-  min-height: 76px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding-inline: 40px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-.console-breadcrumb {
-  font-size: 12px;
-  color: var(--muted);
-}
-.console-breadcrumb span {
-  margin-inline: 14px;
-  color: var(--muted);
-}
-.console-breadcrumb strong {
-  color: var(--foreground);
-  font-weight: 550;
-}
-.console-mobile-brand,
-.console-mobile-menu {
-  display: none;
+.console-body > .inline-alert {
+  width: min(calc(100% - 64px), 1036px);
+  margin-inline: auto;
 }
 .console-main {
-  width: min(100%, 1050px);
+  width: min(100%, 1100px);
   margin-inline: auto;
-  padding: 50px 56px 36px;
+  padding: 50px 32px 36px;
   flex: 1;
 }
 .page-heading {
@@ -468,18 +394,10 @@
   color: var(--foreground);
   flex-shrink: 0;
 }
-.client-mark.claude {
-  color: #80533a;
-  background: #f2ebe3;
-  border-color: #e6ddd1;
-}
-.client-mark.codex {
-  color: var(--green);
-  background: var(--green-soft);
-  border-color: #d5e0d1;
-}
 .client-identity {
-  min-width: 100px;
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
 }
 .client-identity h2 {
   font-size: 14px;
@@ -706,28 +624,12 @@
 .account-skip:focus {
   top: 12px;
 }
-.account-mobile-sheet .account-nav {
-  margin-top: 26px;
-}
-.account-mobile-sheet > button:not(:last-child) {
-  margin-top: 28px;
-}
 @media (min-width: 1600px) {
   .sign-in-scene {
     min-height: 680px;
   }
 }
 @media (max-width: 1100px) {
-  .console-layout {
-    grid-template-columns: 214px minmax(0, 1fr);
-  }
-  .console-main {
-    padding: 40px 32px;
-  }
-  .console-topbar,
-  .preview-notice {
-    padding-inline: 28px;
-  }
   .heading-with-action {
     align-items: flex-start;
   }
@@ -772,29 +674,16 @@
   .scene-caption > div {
     margin-top: 15px;
   }
-  .console-layout {
-    display: block;
-  }
-  .console-sidebar {
-    display: none;
-  }
-  .console-body {
-    min-height: 100svh;
-  }
   .console-topbar {
-    min-height: 70px;
-    padding-inline: 20px;
+    min-height: 76px;
+    padding-inline: 24px;
+    gap: 12px;
   }
-  .console-mobile-brand,
-  .console-mobile-menu {
-    display: flex;
-  }
-  .console-mobile-menu {
-    margin-left: auto;
-  }
-  .console-breadcrumb,
-  .private-label {
+  .console-identity > span {
     display: none;
+  }
+  .console-body > .inline-alert {
+    width: calc(100% - 48px);
   }
   .console-main {
     padding: 34px 24px;
@@ -816,6 +705,12 @@
   .connection-main {
     flex-wrap: wrap;
     gap: 10px;
+  }
+  .client-identity {
+    flex-basis: calc(100% - 60px);
+  }
+  .connection-main > .status-badge {
+    margin-left: 60px;
   }
   .connection-action {
     margin-left: 60px;

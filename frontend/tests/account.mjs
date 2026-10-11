@@ -13,6 +13,28 @@ import { chromium } from "playwright";
 import { CONFIG } from "../../src/config/config.ts";
 
 // The Worker/OIDC protocol is tested in tests/worker.test.js. This fixture checks the Next server and browser together.
+const clientFixtures = [
+  ["Codex", "codex"],
+  ["ChatGPT", "openai"],
+  ["Claude", "claude-color"],
+  ["Cursor", "cursor"],
+  ["Amp", "amp-color"],
+  ["OpenCode", "opencode"],
+  ["OpenClaw", "openclaw-color"],
+  ["Hermes Agent", "hermes-agent"],
+  ["Pi Agent", "pi-agent"],
+  ["Pipeline", null],
+].map(([name, logo], index) => ({
+  id: index === 0 ? "consent_live" : `consent_${index}`,
+  name,
+  logo,
+  description: "Registered client. Name is not verified.",
+  status: "active",
+  connected: new Date().toISOString(),
+  expires: new Date(
+    Date.now() + CONFIG.oauth.refreshTokenTtlSeconds * 1000,
+  ).toISOString(),
+}));
 const sessions = new Map();
 const states = new Set();
 let frontend;
@@ -50,7 +72,9 @@ const backend = createServer(async (request, response) => {
       assert.equal(cookies["__Host-mentis-sign-in"], state);
       assert.ok(states.delete(state));
       const secret = randomUUID();
-      sessions.set(secret, { connected: true });
+      sessions.set(secret, {
+        clients: new Set(clientFixtures.map((client) => client.id)),
+      });
       response.writeHead(302, {
         Location: `${frontend}/account`,
         "Set-Cookie": [
@@ -75,20 +99,7 @@ const backend = createServer(async (request, response) => {
     if (url.pathname === "/api/connections")
       return send(
         200,
-        session.connected
-          ? [
-              {
-                id: "consent_live",
-                name: "Codex",
-                description: "Registered client. Name is not verified.",
-                status: "active",
-                connected: new Date().toISOString(),
-                expires: new Date(
-                  Date.now() + CONFIG.oauth.refreshTokenTtlSeconds * 1000,
-                ).toISOString(),
-              },
-            ]
-          : [],
+        clientFixtures.filter((client) => session.clients.has(client.id)),
       );
     assert.equal(request.method, "POST");
     assert.equal(
@@ -101,7 +112,7 @@ const backend = createServer(async (request, response) => {
       for await (const chunk of request) body += chunk;
       assert.equal(new URLSearchParams(body).get("consentId"), "consent_live");
       if (failDisconnect) return send(503, { error: "Fixture outage" });
-      session.connected = false;
+      session.clients.delete("consent_live");
       return send(204);
     }
     if (url.pathname === "/api/logout") {
@@ -207,21 +218,6 @@ try {
     await page
       .getByRole("heading", { name: "Dashboard", exact: true })
       .waitFor();
-    const navigate = async (label) => {
-      if (name === "mobile") {
-        await page
-          .getByRole("button", { name: "Open account navigation" })
-          .click();
-        await page
-          .getByRole("dialog")
-          .getByRole("link", { name: label, exact: true })
-          .click();
-      } else
-        await page
-          .getByRole("navigation", { name: "Account navigation", exact: true })
-          .getByRole("link", { name: label, exact: true })
-          .click();
-    };
     const audit = async (screen) => {
       const violations = (
         await new AxeBuilder({ page })
@@ -244,17 +240,73 @@ try {
         fullPage: true,
       });
     };
-    await audit("account");
-    console.log(`${name}: sign-in and account reload passed`);
-    await navigate("Connected clients");
-    await page.getByRole("heading", { name: "Codex", exact: true }).waitFor();
-    assert.equal(await page.locator(".client-mark img").count(), 1);
-    assert.ok(
+    assert.equal(await page.locator("aside").count(), 0);
+    assert.equal(
       await page
-        .locator(".client-mark img")
-        .evaluate((image) => image.complete && image.naturalWidth > 0),
+        .getByRole("button", { name: "Open account navigation" })
+        .count(),
+      0,
     );
-    await audit("connections");
+    assert.equal(
+      await page.locator(".connection-row").count(),
+      clientFixtures.length,
+    );
+    assert.equal(
+      await page.getByRole("link", { name: "Manage clients" }).count(),
+      0,
+    );
+    for (const client of clientFixtures) {
+      const row = page.locator(".connection-row").filter({
+        has: page.getByRole("heading", { name: client.name, exact: true }),
+      });
+      const image = row.locator(".client-mark img");
+      if (client.logo) {
+        assert.equal(await image.count(), 1, client.name);
+        assert.match(
+          await image.getAttribute("src"),
+          new RegExp(`${client.logo}\\.`),
+        );
+        await image.scrollIntoViewIfNeeded();
+        await page.waitForFunction((name) => {
+          const row = [...document.querySelectorAll(".connection-row")].find(
+            (row) => row.querySelector("h2").textContent === name,
+          );
+          const image = row.querySelector(".client-mark img");
+          return image.complete && image.naturalWidth > 0;
+        }, client.name);
+        const bounds = await image.boundingBox();
+        assert.equal(bounds.width, 24);
+        assert.equal(bounds.height, 24);
+      } else {
+        assert.equal(
+          await image.count(),
+          0,
+          "Unknown clients use the fallback icon",
+        );
+        assert.equal(await row.locator(".client-mark svg").count(), 1);
+      }
+    }
+    await page.goto(`${frontend}/connections`);
+    await page.waitForURL(`${frontend}/dashboard`);
+    await page.getByRole("heading", { name: "Codex", exact: true }).waitFor();
+    await page
+      .getByRole("searchbox", { name: "Search clients" })
+      .fill("ChatGPT");
+    assert.equal(await page.locator(".connection-row").count(), 1);
+    await page
+      .getByRole("searchbox", { name: "Search clients" })
+      .fill("No match");
+    await page.getByRole("heading", { name: "No matching clients" }).waitFor();
+    await page.getByRole("button", { name: "Clear filters" }).click();
+    assert.equal(
+      await page.locator(".connection-row").count(),
+      clientFixtures.length,
+    );
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await audit("dashboard");
+    console.log(
+      `${name}: sign-in, dashboard reload, client logos, and legacy redirect passed`,
+    );
     await page
       .getByRole("button", { name: "Connect a client", exact: true })
       .click();
@@ -282,7 +334,13 @@ try {
     await audit("connect-client");
     await page.getByRole("button", { name: "Close client setup" }).click();
     failDisconnect = true;
-    await page.getByRole("button", { name: "Disconnect", exact: true }).click();
+    await page
+      .locator(".connection-row")
+      .filter({
+        has: page.getByRole("heading", { name: "Codex", exact: true }),
+      })
+      .getByRole("button", { name: "Disconnect", exact: true })
+      .click();
     const failedRequest = page.waitForResponse((response) =>
       response.url().endsWith("/api/auth/disconnect"),
     );
@@ -292,7 +350,10 @@ try {
     const failedResponse = await failedRequest;
     assert.equal(failedResponse.status(), 503);
     await page.getByRole("dialog").getByRole("alert").waitFor();
-    assert.equal(await page.locator(".connection-row").count(), 1);
+    assert.equal(
+      await page.locator(".connection-row").count(),
+      clientFixtures.length,
+    );
     failDisconnect = false;
     const successRequest = page.waitForResponse((response) =>
       response.url().endsWith("/api/auth/disconnect"),
@@ -307,12 +368,11 @@ try {
       failures.map((error) => error.stack).join("\n"),
     );
     await page.getByRole("dialog").waitFor({ state: "hidden" });
-    assert.equal(await page.locator(".connection-row").count(), 0);
+    assert.equal(
+      await page.locator(".connection-row").count(),
+      clientFixtures.length - 1,
+    );
     console.log(`${name}: disconnect failure and retry passed`);
-    if (name === "mobile")
-      await page
-        .getByRole("button", { name: "Open account navigation" })
-        .click();
     const [logoutResponse] = await Promise.all([
       page.waitForResponse((response) =>
         response.url().endsWith("/api/auth/logout"),
@@ -350,10 +410,25 @@ try {
   await page.getByRole("button", { name: "Try again", exact: true }).click();
   await page.getByRole("heading", { name: "Dashboard", exact: true }).waitFor();
   await page.goto(`${frontend}/authorize?preview=1&client=cursor`);
-  await page.waitForURL(`${frontend}/connections`);
+  await page.waitForURL(`${frontend}/dashboard`);
   assert.equal(
     await page.getByText("Preview consent", { exact: true }).count(),
     0,
+  );
+  for (const session of sessions.values()) session.clients.clear();
+  await page.reload();
+  await page
+    .getByRole("heading", { name: "Connect your first client" })
+    .waitFor();
+  assert.equal(
+    await page.getByRole("button", { name: "Clear filters" }).count(),
+    0,
+  );
+  assert.equal(
+    await page
+      .getByRole("button", { name: "Connect a client", exact: true })
+      .count(),
+    1,
   );
   await page.goto(`${frontend}/account/security`);
   assert.equal(

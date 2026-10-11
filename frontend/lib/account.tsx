@@ -93,7 +93,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!/^\/(dashboard|connections|sign-in)(\/|$)/.test(path)) return;
+    if (!/^\/(dashboard|sign-in)(\/|$)/.test(path)) return;
     const controller = new AbortController();
     void load(controller.signal);
     const onFocus = () => {
@@ -177,14 +177,4 @@ export function useAccount() {
   const account = useContext(Context);
   if (!account) throw new Error("AccountProvider is required");
   return account;
-}
-
-export function accountInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => Array.from(part)[0])
-    .join("")
-    .toUpperCase();
 }

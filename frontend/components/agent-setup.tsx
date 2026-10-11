@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, CodeXml, Link } from "lucide-react";
+import { Check, ChevronDown, Link } from "lucide-react";
 import { Select } from "radix-ui";
 import { useId, useState } from "react";
 import { CopyButton } from "@/components/account/shared";
@@ -41,8 +41,6 @@ export function AgentSetup({ allAgents = false }: { allAgents?: boolean }) {
                     <span className="agent-choice">
                       {item.logo ? (
                         <Logo name={item.logo} size={22} />
-                      ) : key === "cursor" ? (
-                        <CodeXml size={22} aria-hidden="true" />
                       ) : (
                         <Link size={22} aria-hidden="true" />
                       )}
