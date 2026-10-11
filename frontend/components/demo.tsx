@@ -113,7 +113,6 @@ export function Demo() {
               The observation states what happened. An optional inference states
               what the agent thinks it means.
             </p>
-            <code>record_attempt</code>
           </div>
           <div className="demo-step-evidence">
             <RecordFields />
@@ -130,7 +129,6 @@ export function Demo() {
               A similarity score measures the match. It does not show that an
               attempt worked.
             </p>
-            <code>search</code>
           </div>
           <div className="demo-step-evidence">
             <div className="example-query">
@@ -148,7 +146,6 @@ export function Demo() {
               redirect change that failed and the cookie fix that passed.
             </p>
             <p>Git state is reported by the agent.</p>
-            <code>recall</code>
           </div>
           <div className="demo-step-evidence">
             <InspectGraph />

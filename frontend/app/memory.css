@@ -133,12 +133,6 @@
   line-height: 1.75;
   color: var(--muted);
 }
-.demo-step-copy > code {
-  display: block;
-  margin-top: 22px;
-  color: var(--green);
-  font-size: 11px;
-}
 .demo-step-evidence {
   min-width: 0;
   align-self: center;

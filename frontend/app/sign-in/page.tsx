@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { SignInView } from "@/components/account/sign-in";
 
 export const metadata: Metadata = {
-  title: "Sign in — Mentis",
+  title: "Sign In",
   robots: { index: false, follow: false },
 };
 export default async function SignInPage({

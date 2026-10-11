@@ -85,22 +85,6 @@
   align-items: center;
   justify-content: space-between;
 }
-.access-footer {
-  margin-top: auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-  padding: 26px 48px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.access-footer span,
-.access-footer a {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
 .sign-in-layout {
   width: min(1240px, calc(100% - 96px));
   margin: 30px auto;
@@ -641,10 +625,6 @@
   .access-header {
     padding: 22px 24px;
   }
-  .access-footer {
-    padding: 24px;
-    font-size: 10px;
-  }
   .sign-in-layout {
     width: calc(100% - 48px);
     gap: 32px;
@@ -744,10 +724,6 @@
   }
 }
 @media (max-width: 440px) {
-  .access-footer {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
   .connections-toolbar {
     gap: 8px;
   }

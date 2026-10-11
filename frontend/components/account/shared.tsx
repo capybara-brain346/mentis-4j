@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowUpRight, Check, Copy } from "lucide-react";
+import { ArrowLeft, Check, Copy } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
@@ -92,16 +92,6 @@ export function CopyButton({
   );
 }
 
-export function AccessFooter() {
-  return (
-    <footer className="access-footer">
-      <Link href="/">
-        Back to Mentis <ArrowUpRight size={13} aria-hidden="true" />
-      </Link>
-    </footer>
-  );
-}
-
 export function AccessFrame({ children }: { children: React.ReactNode }) {
   return (
     <div className="account-ui access-page">
@@ -112,7 +102,6 @@ export function AccessFrame({ children }: { children: React.ReactNode }) {
         </Link>
       </header>
       {children}
-      <AccessFooter />
     </div>
   );
 }

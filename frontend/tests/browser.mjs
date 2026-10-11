@@ -37,7 +37,7 @@ async function checkPage(name, viewport) {
   const response = await page.goto(baseUrl, { waitUntil: "networkidle" });
   assert.equal(response.status(), 200);
   await page.evaluate(() => document.fonts.ready);
-  assert.match(await page.title(), /Mentis/);
+  assert.equal(await page.title(), "Home");
   const actionContrast = await page.locator(".pill").evaluateAll((nodes) => {
     const luminance = (color) => {
       const values = color
@@ -91,6 +91,10 @@ async function checkPage(name, viewport) {
   );
 
   const demo = page.getByLabel("Mentis product demonstration", { exact: true });
+  for (const stage of ["1 Record", "2 Find", "3 Inspect"]) {
+    await demo.getByRole("tab", { name: stage, exact: true }).click();
+    assert.equal(await demo.locator(".demo-step-copy > code").count(), 0);
+  }
   await demo.getByRole("tab", { name: "2 Find", exact: true }).click();
   assert.ok(
     await demo.getByText("Similarity 0.92", { exact: true }).isVisible(),

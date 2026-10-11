@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { backendOrigin } from "@/lib/auth-proxy";
 
 export const metadata: Metadata = {
-  title: "Client access — Mentis",
+  title: "Client Access",
   robots: { index: false, follow: false },
 };
 

@@ -69,6 +69,7 @@ try {
         .count(),
       0,
     );
+    assert.equal(await page.title(), "Dashboard");
     await audit(page, `${name}-signed-out`);
     await page.getByRole("link", { name: "Go to sign-in" }).click();
     await page.getByRole("button", { name: "Continue with Google" }).waitFor();
@@ -79,6 +80,13 @@ try {
     assert.equal(
       await page
         .getByText("Preview the consent screen", { exact: true })
+        .count(),
+      0,
+    );
+    assert.equal(await page.title(), "Sign In");
+    assert.equal(
+      await page
+        .getByRole("link", { name: "Back to Mentis", exact: true })
         .count(),
       0,
     );

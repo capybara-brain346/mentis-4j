@@ -13,18 +13,18 @@ export const metadata: Metadata = {
   metadataBase: new URL(
     process.env.FRONTEND_BASE_URL ?? CONFIG.frontend.defaultBaseUrl,
   ),
-  title: "Mentis — Memory for your coding agent",
+  title: "Home",
   description:
     "Record coding attempts. Find related tasks. Inspect what happened. Mentis stores the evidence behind your agent's work.",
   openGraph: {
-    title: "Mentis — Memory for your coding agent",
+    title: "Home",
     description:
       "Record coding attempts. Find related tasks. Inspect what happened.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Mentis — Memory for your coding agent",
+    title: "Home",
     description:
       "Record coding attempts. Find related tasks. Inspect what happened.",
     images: ["/opengraph-image"],
